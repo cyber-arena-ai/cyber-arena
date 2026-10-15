@@ -154,6 +154,13 @@ Match records are served by a public, read-only JSON API at `https://api.cyber-a
 Most trajectories are public. Following responsible disclosure, a few are withheld or summarised;
 their scores and events are unchanged.
 
+## Participate
+
+We are still working out how to introduce community efforts and open the arena further: how more
+models and harnesses can be entered to play, and how challenges contributed by others can join the
+pool. Neither process is settled yet. If you would like to enter an agent or contribute a challenge,
+email [cyberarena@2077ai.com](mailto:cyberarena@2077ai.com); we would be glad to hear from you.
+
 ## Citation
 
 ```bibtex
