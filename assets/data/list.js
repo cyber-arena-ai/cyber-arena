@@ -12,6 +12,9 @@ window.INSTITUTIONS = [
   { name: 'UC Santa Barbara',      url: 'https://www.ucsb.edu',      img: 'assets/img/inst/ucsb.png' },
   { name: 'UC Santa Cruz',         url: 'https://www.ucsc.edu',      img: 'assets/img/inst/ucsc.png' },
   { name: 'UW–Madison',            url: 'https://www.wisc.edu',      img: 'assets/img/inst/uwisc.png' },
+  { name: 'Carnegie Mellon',       url: 'https://www.cmu.edu',       img: 'assets/img/inst/cmu.png' },
+  { name: 'Purdue',                url: 'https://www.purdue.edu',    img: 'assets/img/inst/purdue.png' },
+  { name: 'Texas A&M',             url: 'https://www.tamu.edu',      img: 'assets/img/inst/tamu.png' },
   { name: 'Johns Hopkins',         url: 'https://www.jhu.edu',       img: 'assets/img/inst/jhu.png' },
   { name: 'University of Toronto', url: 'https://www.utoronto.ca',   img: 'assets/img/inst/uot.png' },
 ];
