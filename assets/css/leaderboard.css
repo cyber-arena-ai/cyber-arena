@@ -1,0 +1,154 @@
+/* Leaderboard — champion lead block + ranked list, driven by whatever `columns`
+   a campaign declares. The original design hardcoded wins/losses/flags; these
+   rules must not assume any particular stat, only that there are a few short
+   numbers per entrant. */
+
+.notice{display:flex;align-items:center;gap:14px;margin:16px 0 4px;padding:12px 16px;background:var(--paper);border:2px solid var(--ink);box-shadow:5px 5px 0 var(--pink);font-weight:600;font-size:14px;line-height:1.45;color:var(--ink)}
+.notice .tag{flex:none;align-self:flex-start;font-family:'Hanken Grotesk';font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--paper);background:var(--pink);padding:4px 10px;transform:rotate(-3deg)}
+.notice b{background:var(--pink);color:var(--paper);padding:0 5px;font-weight:800}
+
+/* --- what produced this ranking ---
+   Reference text, not a headline: a quiet framed note, collapsed behind one
+   line, so the standings are the first thing under the title. */
+.lb-meta{margin:22px 0 0;font-size:13px;color:#5d564c;background:var(--paper2);border:2px solid var(--ink);padding:11px 16px}
+.lb-meta summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:8px;font-weight:700;color:#6f6657}
+.lb-meta summary::-webkit-details-marker{display:none}
+.lb-meta summary::before{content:"";border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-left:6px solid currentColor;transition:transform var(--t-ui) var(--ease-out)}
+.lb-meta[open] summary::before{transform:rotate(90deg)}
+.lb-meta summary:hover{color:var(--ink)}
+.lb-algo{display:grid;grid-template-columns:52px 1fr;gap:12px;margin-top:12px;max-width:860px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6}
+.lb-algo .tag{justify-self:start;align-self:start;font-family:'Hanken Grotesk';font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--paper);background:var(--ink);padding:2px 7px}
+/* the list's own caption — it rides inside the Standings header, so it has to
+   shed everything .sech imposes on its title text */
+.lb-facts{display:inline-flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#7a7468;font-weight:600;
+  text-transform:none;letter-spacing:0;margin-left:16px}
+.lb-facts:empty{display:none}
+.lb-facts b{color:var(--ink);font-weight:800}
+
+/* a cached copy served while the campaign is unreachable — never silent */
+.lb-stale{color:#c2740f;font-weight:700}
+.filt button .pstale{font-style:normal;color:#e08a1e;font-weight:900}
+/* a registered campaign that is not answering */
+.filt button.off{border-color:#bcb4a4;color:#9a9282;border-style:dashed}
+.filt button.off.on{background:#8a8378;color:var(--paper);border-color:#8a8378}
+.lb-err{display:inline-block;margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8378}
+.lb-loading{font-size:13px;color:#7a7468;padding:18px 2px}
+
+/* --- champion --- */
+.lead{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--blue);color:var(--paper);padding:24px 28px;margin:0 0 8px;position:relative;overflow:hidden}
+.lead:empty{display:none}
+.lead .big{font-size:120px;font-weight:900;line-height:.8;text-shadow:6px 6px 0 var(--pink)}
+.lead .who{font-size:34px;font-weight:900;text-transform:uppercase;letter-spacing:-1px}
+.lead .org{font-weight:600;font-size:15px;opacity:.9;text-transform:uppercase;letter-spacing:1px}
+.lead .stamp{position:absolute;top:18px;right:24px;border:2px solid var(--paper);color:var(--paper);font-weight:900;font-size:13px;padding:5px 12px;transform:rotate(8deg);letter-spacing:1px}
+.lead .nums{display:flex;gap:26px;margin-top:10px;flex-wrap:wrap}
+.lead .nums b{display:block;font-size:26px}
+.lead .nums span{font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.85}
+/* the campaign's own score reads first and largest — the stats are its evidence */
+.lead .nums .score b{font-size:34px}
+.lead .nums .score{padding-right:22px;margin-right:4px;border-right:2px solid rgba(255,255,255,.35)}
+/* nobody cleared the match minimum: the leader is flagged, not crowned */
+.lead.prov{background:#8a8378 !important}
+.lead.prov .big{text-shadow:6px 6px 0 rgba(0,0,0,.22)}
+
+.lead:not(.in){opacity:0}
+.lead.in,.row{animation:floatin .22s ease-out backwards;animation-delay:calc(var(--d,0s) * .3)}
+/* a quiet arrival: a short fade, no slide, a tight stagger — it replays on every visit */
+@keyframes floatin{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.lead.in,.row{animation:none}}
+
+/* --- the rest of the field --- */
+/* the standings: one framed box, the champion band as its header, the field below */
+.standings{border:2px solid var(--ink);background:var(--paper2)}
+.standings:has(#rows:empty){display:none}          /* nothing ranked yet: no empty frame */
+.standings .lead{margin:0}
+.standings .row{padding-left:20px;padding-right:20px}
+.row{display:grid;grid-template-columns:60px 1fr auto auto;align-items:center;gap:18px;padding:14px 6px;border-bottom:2px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums}
+.row .nm{font-size:21px;font-weight:800}
+.hchip{display:inline-block;vertical-align:2px;font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--paper);padding:2px 6px;margin-right:9px;border:2px solid var(--ink)}
+.row .nm em{font-style:normal;font-weight:600;font-size:13px;display:block;color:#7a7468;text-transform:uppercase;letter-spacing:.5px}
+.row .elo{font-size:24px;font-weight:900}
+.row:hover{background:rgba(37,64,255,.06)}
+
+/* campaign-declared stats: a compact strip, one pair per column */
+.row .stats{display:flex;gap:14px;text-align:right}
+.row .stats b{display:block;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;color:#4a443c}
+.row .stats span{display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#9a9282}
+
+/* too few matches to mean anything — ranked, but visibly so */
+.row.prov{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.022) 6px 12px)}
+.row.prov .nm,.row.prov .elo{color:#8f8879}
+.prov-tag{font-style:normal;font-family:'Hanken Grotesk';font-weight:800;font-size:9px;text-transform:uppercase;letter-spacing:.6px;
+  color:#8a8378;border:2px solid var(--line);padding:1px 5px;margin-left:8px;vertical-align:3px}
+.lead .stamp .prov-tag{border-color:var(--paper);color:var(--paper)}
+
+@media(max-width:860px){
+  .row{grid-template-columns:46px 1fr auto;gap:12px}
+  .row .stats{display:none}          /* the score still ranks; stats need width */
+}
+@media(max-width:680px){
+  .lead{grid-template-columns:1fr}
+  .lead .big{font-size:80px}
+  .lead .nums{gap:16px}
+  .lead .nums .score{border-right:0;padding-right:0}
+  .row .nm{font-size:18px}
+}
+
+/* --- posterior bell: score with its 5–95% interval on one shared axis ---
+   The three trailing columns (bell · score · stats) have FIXED widths and are
+   shared by the champion block and every row, so all the axes align. */
+.row.iv{grid-template-columns:60px 1fr 320px 112px 76px}
+.row.iv .elo{text-align:right}
+.row.iv .stats{justify-content:flex-end}
+.post{display:flex;align-items:flex-end;min-width:0}
+.post .bell{display:block;max-width:100%;height:auto}
+/* right padding matches .row so the fixed trailing columns share one right edge */
+.lead.iv{grid-template-columns:auto 1fr 320px 112px 76px;gap:18px;padding-right:20px}   /* = the framed rows' right padding, so the columns line up */
+.lead.iv > .post,.lead.iv > .score,.lead.iv > .stats{align-self:end;padding-bottom:2px}
+.lead.iv .score b{display:block;font-size:34px;line-height:1}
+.lead.iv .score span,.lead.iv .stats span{font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.85;white-space:nowrap}
+.lead.iv .score{text-align:right}
+.lead.iv .stats{display:flex;justify-content:flex-end;gap:14px;text-align:right}
+.lead.iv .stats b{display:block;font-size:26px}
+@media(max-width:1000px){ .row.iv{grid-template-columns:60px 1fr 320px 112px} .row.iv .stats{display:none}
+  .lead.iv{grid-template-columns:auto 1fr 320px 112px} .lead.iv > .stats{display:none} }
+@media(max-width:860px){ .row.iv{grid-template-columns:46px 1fr auto} .row.iv .post{display:none}
+  .lead.iv{grid-template-columns:auto 1fr auto} .lead.iv > .post{display:none} }
+@media(max-width:680px){ .lead.iv{grid-template-columns:1fr} .lead.iv .score{text-align:left} }
+
+/* the champion's badge sits on its own colour ground: a paper keyline keeps it a badge */
+.lead .eicon.rev{outline:2px solid var(--paper)}
+
+/* the champion's crown: flat gold pixels sat on the badge, tipped at a jaunty
+   angle; it drops on once when the standings arrive */
+.king{position:relative;display:inline-block}
+.king .crown{position:absolute;left:50%;bottom:calc(100% - .2em);width:.78em;height:auto;margin-left:-.44em;
+  transform:rotate(-14deg);transform-origin:50% 100%;image-rendering:pixelated;
+  animation:crown .6s var(--ease-spring) .25s backwards}
+@keyframes crown{from{transform:translateY(-.6em) rotate(-40deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){ .king .crown{animation:none} }
+
+/* --- ?embed=1: the page framed by a mirror (the Hugging Face Space) ---
+   No site chrome, no campaign picker, no method note; the wordmark beside the
+   title is the one way back to the site, and it opens outside the frame. */
+.embed-brand{display:none}
+html.embed .embed-brand{display:inline-block}
+html.embed #site-top,html.embed #site-footer,html.embed #campaigns,html.embed .lb-meta,html.embed .mca-rail{display:none}
+/* no footer in the frame, so the last figure (and its offset shadow) needs room to end */
+html.embed body{padding-bottom:40px}
+/* the wordmark keeps its own look, at the title's size (letter-spacing scaled with it) */
+.mast .embed-brand{font-size:50px;line-height:.9;letter-spacing:-.025em}
+/* the jump arrow as a sticker: the site's arrow in paper on an ink square, stuck on at a tilt */
+.embed-brand sup{display:inline-grid;place-items:center;width:1.3em;height:1.3em;font-size:.4em;line-height:0;margin-left:6px;vertical-align:.78em;
+  background:var(--ink);color:var(--paper);transform:rotate(-6deg);transition:transform var(--t-move) var(--ease-spring)}
+.embed-brand sup .arw{vertical-align:0}
+/* hover (wordmark or sticker): the sticker springs round, its arrow darts the way it points */
+.embed-brand:hover sup,.embed-brand:focus-visible sup{transform:rotate(12deg) scale(1.15)}
+.embed-brand:hover sup .arw,.embed-brand:focus-visible sup .arw{transform:rotate(-45deg) translateX(.14em)}
+@media(prefers-reduced-motion:reduce){ .embed-brand sup,.embed-brand sup .arw{transition:none} }
+@media(max-width:760px){ .mast .embed-brand{font-size:32px} }

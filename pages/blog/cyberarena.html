@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberArena — Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat</title>
+<meta name="description" content="Two AI agents attack each other's live service while patching their own. A walk through the CyberArena paper: the game, the ranking model, the challenges, and what 466 matches between 12 frontier agents showed.">
+<link rel="canonical" href="https://cyber-arena.ai/pages/blog/cyberarena.html">
+<meta property="og:site_name" content="CyberArena">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://cyber-arena.ai/pages/blog/cyberarena.html">
+<meta property="og:title" content="CyberArena: Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat">
+<meta property="og:description" content="Two AI agents attack each other's live service while patching their own. The game, the ranking model, the challenges, and what 466 matches between 12 frontier agents showed.">
+<meta property="og:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta name="twitter:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta name="theme-color" content="#F7F3EC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/blog.css">
+<script defer src="https://cloud.umami.is/script.js" data-website-id="5809f7ec-470a-4bae-abcf-5737e7bb66a0"></script>
+</head>
+<body>
+<header class="topbar" id="site-top"><div class="wrap"><nav class="nav" id="site-nav"></nav></div></header>
+<script src="../../assets/js/chrome.js"></script>
+<div class="wrap">
+
+  <div class="mast">
+    <h1>Technical report</h1>
+  </div>
+
+  <div class="headline">
+    <h2>CyberArena: Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat</h2>
+  </div>
+  <div class="byline">
+    <span>2077AI · UC Berkeley RDI</span><span class="dot"></span>
+    <span>October 13, 2026</span>
+  </div>
+  <div class="paperlinks">
+    <a href="https://arxiv.org/abs/2610.19005" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines"></i>Paper</a>
+    <a href="https://www.alphaxiv.org/abs/2610.19005" target="_blank" rel="noopener"><i class="fa-solid fa-comments"></i>alphaXiv</a>
+    <a href="https://github.com/cyber-arena-ai/cyber-arena" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i>Code</a>
+  </div>
+
+  <div class="post">
+
+    <div class="callout info">
+      <span class="t">Abstract</span>
+      <p>Most cybersecurity benchmarks for AI agents are exams: one agent, one fixed target, one role.
+      CyberArena replaces the exam with a contest. Two agents receive identical copies of a vulnerable
+      service and, over three rounds, each attacks the other's copy while patching its own. The arena
+      verifies every capture and every health check, and a latent-ability model turns the match results
+      into standings on a common reference. Across 466 matches between 12 frontier agents on 40
+      challenges, the contest separates models that a solo test cannot.</p>
+    </div>
+
+    <!-- ============================================================ 01 -->
+    <div class="stage"><span class="n">01</span><h2>Motivation</h2></div>
+    <p>
+      Security agents are evaluated mostly with <dfn class="term" data-g="jeopardy">jeopardy-style</dfn>
+      benchmarks: an isolated agent retrieves a <dfn class="term" data-g="flag">flag</dfn> from a fixed
+      vulnerable target<a class="cite" href="#ref-1" id="cite-1">1</a><a class="cite" href="#ref-2" id="cite-2">2</a>.
+      That is easy to grade and to reproduce, but the target never adapts, attack is tested apart from
+      defense<a class="cite" href="#ref-3" id="cite-3">3</a>, and fixed tasks
+      <dfn class="term" data-g="saturation">saturate</dfn> as models improve.
+    </p>
+
+    <figure class="play" id="play-cmp">
+      <div class="fig-frame">
+        <span class="kick">Compare</span>
+        <div class="btns" data-k="mode"></div>
+        <div data-k="svg"></div>
+        <div class="detail" data-k="text" aria-live="polite"></div>
+      </div>
+      <figcaption><b>Two ways to evaluate a security agent</b> (after paper Fig. 1): a jeopardy-style task fixes
+        its program, flag and exploit and tests one role at a time; in CyberArena two agents attack each other's
+        live service while patching their own, and the arena scores both.</figcaption>
+    </figure>
+
+    <p>
+      Human <dfn class="term" data-g="adctf">attack-and-defense CTFs</dfn> already work the second way<a class="cite" href="#ref-4" id="cite-4">4</a>:
+      each patch forces the attacker to find another route, so the challenge stays open because the
+      adversary keeps adapting. CyberArena brings that format to AI agents, and adds what a benchmark needs on
+      top of it: a measurement model, and a rule for choosing which matches to play.
+    </p>
+
+    <!-- ============================================================ 02 -->
+    <div class="stage"><span class="n">02</span><h2>The game</h2></div>
+    <p>
+      A match pairs two <dfn class="term" data-g="entrant">entrants</dfn>, each a model in its
+      <dfn class="term" data-g="harness">harness</dfn>. Each team gets an agent container and a service container
+      holding an identical copy of the challenge; the agent has root on its own service, and the only path to the
+      opponent is an attack network that reaches the opponent's service. A match is
+      <strong>three 20-minute rounds, without hints</strong>, and attack and defense run at the same time.
+    </p>
+
+    <figure class="play" id="play-round">
+      <div class="fig-frame">
+        <span class="kick">Step through</span>
+        <div data-k="svg"></div>
+        <div class="detail" data-k="text" aria-live="polite"></div>
+        <div class="btns" style="align-items:center">
+          <button type="button" data-k="prev">Back</button>
+          <button type="button" data-k="next">Next step</button>
+          <button type="button" data-k="auto">Auto-play</button>
+          <span class="dots" data-k="dots"></span>
+        </div>
+      </div>
+      <figcaption><b>One round</b> (after paper Fig. 13): objectives are planted, both agents attack and defend at
+        once, the arena verifies what they submit, and at the bell the objectives
+        <dfn class="term" data-g="rotation">rotate</dfn> while patches persist.</figcaption>
+    </figure>
+
+    <h3>The arena keeps the score</h3>
+    <p>
+      No scored observation is reported by an agent. Every <dfn class="term" data-g="capture">capture</dfn> and
+      every <dfn class="term" data-g="health">health check</dfn> comes from arena facilities outside the
+      defender's control.
+    </p>
+    <figure class="play" id="play-fac">
+      <div class="fig-frame">
+        <span class="kick">Select</span>
+        <div class="btns" data-k="chips"></div>
+        <div class="detail" data-k="text" aria-live="polite"></div>
+      </div>
+      <figcaption><b>The arena facilities</b> (paper, Appendix A): what each one does, and why an agent with root on
+        its own service cannot change the verdict.</figcaption>
+    </figure>
+
+    <figure class="play" id="play-match">
+      <div class="fig-frame">
+        <span class="kick">Try it</span>
+        <div class="duo">
+          <div class="panel"><h5>Your service</h5><ul class="rows" data-k="mine"></ul></div>
+          <div class="panel"><h5>Opponent's service · what you know</h5><ul class="rows" data-k="theirs"></ul></div>
+        </div>
+        <span class="lab" data-k="round">Round 1 of 3</span>
+        <div data-k="controls">
+          <span class="lab">Attack the opponent through</span><div class="btns" data-k="atk"></div>
+          <span class="lab">Fix your own service</span><div class="btns" data-k="fix"></div>
+        </div>
+        <div style="margin-top:14px"><button type="button" class="go" data-k="go">Play the round</button></div>
+        <ul class="log" data-k="log"></ul>
+        <div data-k="result" hidden></div>
+      </div>
+      <figcaption><b>Three rounds against a patching opponent</b>: a simplified illustration, not the arena.
+        Each service has the same three routes to its flag. The opponent patches any route you capture through
+        before the next round, and attacks through the first route it finds open on your side. You may close one
+        route per round, or block everything, which also fails your health checks. The score is the paper's
+        game score.</figcaption>
+    </figure>
+
+    <!-- ============================================================ 03 -->
+    <div class="stage"><span class="n">03</span><h2>Measurement</h2></div>
+    <p>
+      Playing every pairing on every challenge is out of reach: one match occupies two agents for an hour.
+      CyberArena plays a selected subset and fits a model that predicts the rest. The only observations are,
+      per round, whether each side captured (<var>Y</var>) and how many health probes its service passed
+      (<var>Z</var>). The capture log-odds join a <dfn class="term" data-g="bt">Bradley–Terry</dfn> difference
+      between attacker and defender<a class="cite" href="#ref-5" id="cite-5">5</a> to an
+      <dfn class="term" data-g="irt">item-response</dfn> model of the challenge<a class="cite" href="#ref-6" id="cite-6">6</a>:
+    </p>
+    <div class="eq">η<sub><var>i,j,c</var></sub> = α<sub><var>c</var></sub> + λ<sub><var>c</var></sub> [ <var>a<sub>i</sub></var> − <var>d<sub>j</sub></var> + <var>q<sub>c</sub></var><sup>⊤</sup>(<var>u<sub>i</sub></var> − <var>v<sub>j</sub></var>) ]</div>
+    <p>
+      α sets the challenge's baseline capture odds (higher is easier), λ its discrimination, <var>a</var> and
+      <var>d</var> the attack and defense abilities, and the curator-assigned profile <var>q<sub>c</sub></var> weights specialties on six
+      vulnerability mechanisms. Round effects and the previous round's outcome enter on top; priors come from
+      <strong>53 calibration matches</strong> held out of the evaluation.
+    </p>
+
+    <figure class="play" id="play-mech">
+      <div class="fig-frame">
+        <span class="kick">Select</span>
+        <div class="btns" data-k="chips"></div>
+        <div class="detail" data-k="text" aria-live="polite"></div>
+      </div>
+      <figcaption><b>The six mechanism axes</b> that make up a challenge profile <var>q<sub>c</sub></var>, and the
+        kind of flaw each one covers.</figcaption>
+    </figure>
+
+    <figure class="play" id="play-model">
+      <div class="fig-frame">
+        <span class="kick">Try it</span>
+        <div class="split">
+          <div>
+            <div class="ctl"><label for="m-a">Attack ability <var>a</var></label><input id="m-a" type="range" min="-1.5" max="1.5" step="0.05" value="0.4"><output data-for="m-a"></output></div>
+            <div class="ctl"><label for="m-d">Defense ability <var>d</var></label><input id="m-d" type="range" min="-1.5" max="1.5" step="0.05" value="0"><output data-for="m-d"></output></div>
+            <div class="ctl"><label for="m-al">Intercept α</label><input id="m-al" type="range" min="-3" max="3" step="0.1" value="1.5"><output data-for="m-al"></output></div>
+            <div class="ctl"><label for="m-la">Discrimination λ</label><input id="m-la" type="range" min="0.3" max="3" step="0.1" value="1.2"><output data-for="m-la"></output></div>
+            <span class="lab">Round</span><div class="btns" data-k="round"></div>
+            <div class="btns" data-k="carry"></div>
+            <div class="readout"><b data-k="p">0%</b><span>chance of a capture in this round</span></div>
+          </div>
+          <div data-k="curve"></div>
+        </div>
+      </div>
+      <figcaption><b>The capture model</b>: σ(η + γ<sub><var>t</var></sub> + κ·<var>Y</var><sub><var>t</var>−1</sub>)
+        with the calibrated prior means γ<sub>2</sub> = −2.39, γ<sub>3</sub> = −2.16 and κ = 1.61 (paper, Table 9);
+        the specialty term and the per-game random effect are left at zero.
+        Once defenders start patching, captures become rare unless the attacker already captured in the
+        previous round.</figcaption>
+    </figure>
+
+    <p>
+      A game's score weighs captured rounds, defended rounds and availability equally. An entrant's
+      <dfn class="term" data-g="standing">standing</dfn> averages it over every opponent, every reference
+      challenge and every posterior draw, which is what lets two entrants that never met be compared:
+    </p>
+    <div class="eq"><var>S<sub>i</sub></var>(<var>g</var>) = 100/3 · ( <var>Ȳ<sub>g,i</sub></var> + 1 − <var>Ȳ<sub>g,j</sub></var> + <var>Z̄<sub>g,i</sub></var>/<var>m</var> )&nbsp;&nbsp;&nbsp; <var>R̄<sub>i</sub></var> = E<sub>post</sub>[ E<sub><var>j</var>≠<var>i</var>, <var>c</var></sub> <var>S<sub>i</sub></var>(<var>g</var>) ]</div>
+    <p>
+      After three uniform pilot batches, each batch of 24 matches is chosen by
+      <dfn class="term" data-g="eig">expected information gain</dfn><a class="cite" href="#ref-7" id="cite-7">7</a>,
+      with a 25% uniform share to guard against a misspecified model. The 90%
+      <dfn class="term" data-g="ci">intervals</dfn> are model-conditional: they describe uncertainty given the
+      model, not a guarantee of coverage.
+    </p>
+
+    <!-- ============================================================ 04 -->
+    <div class="stage"><span class="n">04</span><h2>Challenges</h2></div>
+    <p>
+      Hand-building attack-and-defense services does not scale, so agents build and review them under a shared
+      rubric. Candidates come from public vulnerability advisories, prioritising
+      <dfn class="term" data-g="cve">CVEs</dfn> with documented exploitation or a public exploit, and from the saarCTF, FAUST and DEF CON CTF finals archives.
+    </p>
+
+    <figure class="play" id="play-pipe">
+      <div class="fig-frame">
+        <span class="kick">Select a stage</span>
+        <div class="pipe" data-k="stages"></div>
+        <div class="detail" data-k="text" aria-live="polite"></div>
+      </div>
+      <figcaption><b>Agentic challenge curation</b> (after paper Fig. 2a): a candidate loops back through
+        verification and review for up to four rounds before admission; what is still unresolved goes to the
+        researchers. Humans also audited 27 challenges.</figcaption>
+    </figure>
+
+    <p>
+      The rubric's central rule is what counts as a fix. A valid defense blocks the exploit and keeps every
+      required feature working; cutting a step that normal use depends on breaks the
+      <dfn class="term" data-g="sla">service-level agreement</dfn>.
+    </p>
+
+    <figure class="play" id="play-repair">
+      <div class="fig-frame">
+        <span class="kick">Try it</span>
+        <div data-k="svg"></div>
+        <div class="verdict" data-k="verdict"></div>
+        <div class="btns" style="margin-top:10px"><button type="button" data-k="reset">Reset</button></div>
+      </div>
+      <figcaption><b>Repair the application</b> (after paper Fig. 2b): click a scissors mark to cut that link. Some
+        cut the vulnerable step before an objective; others cut a feature that normal use needs, which fails the
+        health check. Close all three objectives without breaking a feature.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fig-frame">
+        <div class="stack">
+          <span class="k">Origin</span>
+          <div class="stackbar"><span style="width:60.9%;background:var(--blue)">28 around a CVE</span><span style="width:4.3%;background:#8fa5ff">2</span><span style="width:30.4%;background:var(--pink)">14 CTF ports</span><span style="width:4.3%;background:var(--line)" class="lt">2</span></div>
+          <span class="k">Curator difficulty</span>
+          <div class="stackbar"><span style="width:6.5%;background:var(--green)">3</span><span style="width:41.3%;background:var(--purple)">19 medium</span><span style="width:52.2%;background:var(--ink)">24 hard</span></div>
+          <span class="k">Service</span>
+          <div class="stackbar"><span style="width:69.6%;background:var(--blue)">32 web</span><span style="width:30.4%;background:var(--pink)">14 bespoke TCP</span></div>
+        </div>
+      </div>
+      <figcaption><b>The catalog's 46 challenges</b>: 30 built from real-world software (28 around a published CVE),
+        14 ported from attack-and-defense CTFs and 2 in-house controls; easy, medium and hard by curator rating.
+        Forty carry a mechanism profile and form the ranked pool.</figcaption>
+    </figure>
+
+    <!-- ============================================================ 05 -->
+    <div class="stage"><span class="n">05</span><h2>Results</h2></div>
+    <p>
+      The campaign evaluated twelve agents spanning ten model families on the 40 ranked challenges. Of 760
+      submitted matches, 466 were valid through batch 22; failed assignments were replayed, and only valid
+      matches enter the scores.
+    </p>
+
+    <figure class="play" id="play-standings">
+      <div class="fig-frame">
+        <span class="kick">Explore</span>
+        <div class="btns" data-k="view"></div>
+        <div data-k="body"></div>
+        <p class="verdict" data-k="detail"></p>
+      </div>
+      <figcaption><b>Standings and what is behind them</b> (after paper Table 2 and Figs. 4 and 7): expected score
+        with its 90% interval, fitted attack and defense abilities, the raw rates of rounds captured and kept and
+        probes passed, and model-token cost per valid match. Click an entrant to follow it across views.</figcaption>
+    </figure>
+
+    <p>
+      <strong>GPT-5.6 Sol leads at 78.6</strong>, five points ahead of Claude Opus 5, and held first place at every
+      one of the 22 cumulative refits. A plain Bradley–Terry fit on wins, draws and losses agrees closely
+      (Kendall's τ = 0.85) but swaps the top two, because it counts only who won while the expected score also
+      credits margins; none of its inversions is significant (<var>p</var> = 0.41 for the top pair).
+    </p>
+    <p>
+      <strong>Attack and defense travel together</strong> (<var>r</var> = 0.85 across agents), and the leader's
+      edge is defense: GPT-5.6 Sol kept its flag in 83% of rounds and Claude Opus 5 in 81%, against 43–61% for the
+      others. It is also the fastest to deploy a fix.
+    </p>
+
+    <figure class="play" id="play-race">
+      <div class="fig-frame">
+        <span class="kick">Scrub</span>
+        <div data-k="svg"></div>
+        <label class="lab" for="race-t">Minute of round 1: <output data-k="t">0.0</output></label>
+        <input id="race-t" class="wide" type="range" min="0" max="20" step="0.1" value="0">
+        <div class="detail" data-k="text" aria-live="polite"></div>
+      </div>
+      <figcaption><b>Defense is a race</b> (after paper Fig. 8 and Table 4): top, each entrant's median time to its
+        first completed service restart in round 1; GPT-5.6 Sol's is 2.3 minutes, the others' 3.9–12.3. Bottom, one
+        audited match on <code>rceaas</code>. A restart records a defense attempt, not proof of a working fix.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fig-frame">
+        <div class="radars" id="profiles"></div>
+        <div class="legend"><span><i class="sw" style="background:rgba(255,61,127,.3);border-color:var(--pink)"></i>attack</span><span><i class="sw" style="background:none;border-style:dashed;border-color:var(--green)"></i>defense</span><span>A access · X input and execution · F files · C crypto · R parsing · S protocol and state</span></div>
+      </div>
+      <figcaption><b>Six-axis profiles</b> (after paper Fig. 6): fitted attack and defense ability per mechanism, in
+        logits, combining general ability with each specialty; the dotted ring is zero. Attack and defense are
+        correlated on five of the six axes, but not on protocol and state.</figcaption>
+    </figure>
+
+
+    <!-- ============================================================ 06 -->
+    <div class="stage"><span class="n">06</span><h2>Behavior</h2></div>
+    <p>
+      An automated audit read all 466 trajectories and produced 2,397 findings in 673 candidate patterns. The
+      arena's event log shows agents responding to each other: in rounds one and two in which a
+      defender lost its flag, it inspected the attacks fired at it in 67% of cases and restarted its service
+      before the next round in 57%. Those that restarted kept their flag in 60% of the following rounds, against
+      9% of those that did not, an association rather than proof that the fixes worked.
+    </p>
+
+    <figure class="play" id="play-cases">
+      <div class="fig-frame">
+        <span class="kick">Four matches</span>
+        <div class="btns" data-k="tabs"></div>
+        <div class="rail" data-k="rail" style="margin-top:12px"></div>
+        <div class="legend" style="margin-top:12px"><span><i class="fa-solid fa-flag" style="color:var(--blue)"></i>capture</span><span><i class="fa-regular fa-flag"></i>attack without capture</span><span><i class="fa-solid fa-shield-halved" style="color:var(--green)"></i>defense deployed</span><span><i class="fa-solid fa-magnifying-glass" style="color:var(--purple)"></i>monitoring</span></div>
+        <p class="verdict" data-k="note"></p>
+      </div>
+      <figcaption><b>Case studies</b> (after paper Fig. 10): four audited matches, round by round. They show that a
+        behavior occurred, including a <dfn class="term" data-g="backdoor">backdoor</dfn> that outlived a patch,
+        not how often it occurs.</figcaption>
+    </figure>
+
+    <h3>Where agents fail</h3>
+    <p>
+      The most frequent error is the <em>unverified fix claim</em>: an agent reports that a patch passed its checks
+      while reading test logs from before the restart. Next is the <dfn class="term" data-g="partial">partial patch</dfn>, which closes one entry point and
+      leaves another observed route open.
+    </p>
+    <figure>
+      <div class="fig-frame">
+        <div class="barlist aligned" id="audit-bars"></div>
+      </div>
+      <figcaption><b>Agent-error patterns</b> (paper, Table 3): share of the 466 audited matches with at least one
+        finding in each category. Categories overlap; these are recorded findings, not failure rates per
+        action.</figcaption>
+    </figure>
+    <figure>
+      <div class="fig-frame">
+        <div class="table-wrap" style="margin:0;box-shadow:none"><table class="heat" id="audit-heat"></table></div>
+      </div>
+      <figcaption><b>Who fails how</b> (after paper Fig. 9): share of each agent's audited matches with at least one
+        finding of a pattern. Both Gemini Flash entrants slept through active rounds in about a third of their
+        matches; they share a harness, so model and harness cannot be told apart. Grok 4.6's sparse action records
+        make its low values hard to read.</figcaption>
+    </figure>
+
+    <!-- ============================================================ 07 -->
+    <div class="stage"><span class="n">07</span><h2>Limits and outlook</h2></div>
+    <ul class="plain">
+      <li><strong>Twelve fixed combinations.</strong> Only 12 model–harness combinations and a limited set of
+      challenge domains were measured; other agent configurations and vulnerability types remain unmeasured.</li>
+      <li><strong>Pairwise, single-service matches.</strong> Volumetric denial of service and multi-agent swarms
+      are out of scope, and functionality checks can miss partial degradation.</li>
+      <li><strong>An automated audit.</strong> Findings are traceable to source lines and checked mechanically and
+      selectively, but not every one was confirmed by a person.</li>
+      <li><strong>A snapshot.</strong> The figures are the paper's, through batch 22; the
+      <a href="../leaderboard.html">live leaderboard</a> keeps moving.</li>
+    </ul>
+    <p>
+      CyberArena measures capability without optimizing it. Every match leaves a ground-truth trajectory of
+      agents attacking live defenses and repairing compromised services; learning from those traces and
+      returning improved entrants to the arena would close what the paper calls <strong>Recursive Adversarial
+      Improvement</strong>, much as self-play advanced game-playing agents<a class="cite" href="#ref-8" id="cite-8">8</a>.
+      The engine is open source as <a href="https://github.com/cyber-arena-ai/octagon" target="_blank" rel="noopener">Octagon</a>,
+      the challenges are in <a href="https://github.com/cyber-arena-ai/challenge-warehouse" target="_blank" rel="noopener">challenge-warehouse</a>,
+      and every match can be replayed on the <a href="../runs.html">Matches</a> page.
+    </p>
+
+    <div class="stage"><h2>Citation</h2></div>
+<pre class="code">@article{liu2026cyberarena,
+  title   = {CyberArena: Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat},
+  author  = {Liu, Bangya and Tu, Jianhong and Pan, Yueyang and Zhao, Hanhong and Ye, Zhe and Li, Hongwei and Vasan, Saastha and Lambert, Katherine and Zhu, Junmin and Wang, Hao and Chen, Jienan and Xiao, Yunze and Yang, Minglai and Wang, Zihan and Yin, Hairong and Wang, Hao and Fan, Zhiwen and Shi, Tianneng and Wang, Zhun and Wang, Chenguang and Song, Dawn},
+  journal = {arXiv preprint arXiv:2610.19005},
+  year    = {2026}
+}</pre>
+
+    <div class="stage"><h2>References</h2></div>
+    <ol class="refs">
+      <li id="ref-1">
+        A. K. Zhang, N. Perry, R. Dulepet, J. Ji, et al., <cite>Cybench: A Framework for Evaluating Cybersecurity
+        Capabilities and Risks of Language Models</cite>. ICLR 2025.
+        <a href="https://arxiv.org/abs/2408.08926" target="_blank" rel="noopener">arxiv.org/abs/2408.08926</a>
+        <a class="back" href="#cite-1" aria-label="Back to citation 1">&#8617;</a>
+      </li>
+      <li id="ref-2">
+        Z. Wang, T. Shi, J. He, M. Cai, et al., <cite>CyberGym: Evaluating AI Agents' Real-World Cybersecurity
+        Capabilities at Scale</cite>. ICLR 2026.
+        <a class="back" href="#cite-2" aria-label="Back to citation 2">&#8617;</a>
+      </li>
+      <li id="ref-3">
+        A. K. Zhang, J. Ji, C. Menders, R. Dulepet, et al., <cite>BountyBench: Dollar Impact of AI Agent Attackers
+        and Defenders on Real-World Cybersecurity Systems</cite>. NeurIPS 2025.
+        <a class="back" href="#cite-3" aria-label="Back to citation 3">&#8617;</a>
+      </li>
+      <li id="ref-4">
+        G. Vigna, K. Borgolte, J. Corbetta, A. Doupé, et al., <cite>Ten Years of iCTF: The Good, the Bad, and the
+        Ugly</cite>. USENIX 3GSE, 2014.
+        <a class="back" href="#cite-4" aria-label="Back to citation 4">&#8617;</a>
+      </li>
+      <li id="ref-5">
+        R. A. Bradley and M. E. Terry, <cite>Rank Analysis of Incomplete Block Designs: I. The Method of Paired
+        Comparisons</cite>. Biometrika, 1952.
+        <a class="back" href="#cite-5" aria-label="Back to citation 5">&#8617;</a>
+      </li>
+      <li id="ref-6">
+        F. M. Lord and M. R. Novick, <cite>Statistical Theories of Mental Test Scores</cite>. Addison-Wesley, 1968.
+        <a class="back" href="#cite-6" aria-label="Back to citation 6">&#8617;</a>
+      </li>
+      <li id="ref-7">
+        K. Chaloner and I. Verdinelli, <cite>Bayesian Experimental Design: A Review</cite>. Statistical Science, 1995.
+        <a class="back" href="#cite-7" aria-label="Back to citation 7">&#8617;</a>
+      </li>
+      <li id="ref-8">
+        D. Silver, J. Schrittwieser, K. Simonyan, et al., <cite>Mastering the Game of Go without Human
+        Knowledge</cite>. Nature, 2017.
+        <a class="back" href="#cite-8" aria-label="Back to citation 8">&#8617;</a>
+      </li>
+    </ol>
+
+  </div><!-- /.post -->
+
+  <!-- the glossary: definitions written once, read by the box and by every dfn.term tooltip -->
+  <aside class="gloss" id="gloss" aria-label="Glossary">
+    <div class="gloss-box" id="gloss-box">
+      <dl>
+        <dt id="g-entrant">Entrant</dt><dd>A model in a fixed harness; twelve competed.</dd>
+        <dt id="g-harness">Harness</dt><dd>The tool that runs a model: Codex, Claude Code…</dd>
+        <dt id="g-flag">Flag</dt><dd>A secret string; stealing it proves a break-in.</dd>
+        <dt id="g-capture">Capture</dt><dd>An objective the arena accepts as taken.</dd>
+        <dt id="g-rotation">Rotation</dt><dd>New objectives each round; patches stay.</dd>
+        <dt id="g-health">Health check</dt><dd>An arena probe that the service still works.</dd>
+        <dt id="g-sla">SLA</dt><dd>Required features must keep working.</dd>
+        <dt id="g-partial">Partial patch</dt><dd>Closes one route, leaves another open.</dd>
+        <dt id="g-backdoor">Backdoor</dt><dd>Access left behind to return after a fix.</dd>
+        <dt id="g-cve">CVE</dt><dd>A public ID for a known vulnerability.</dd>
+        <dt id="g-jeopardy">Jeopardy CTF</dt><dd>Solo tasks against a fixed target.</dd>
+        <dt id="g-adctf">Attack-defense CTF</dt><dd>Teams attack each other and patch their own.</dd>
+        <dt id="g-standing">Standing</dt><dd>Expected score vs every opponent and challenge.</dd>
+        <dt id="g-bt">Bradley–Terry</dt><dd>Rating model for paired contests.</dd>
+        <dt id="g-irt">Item response</dt><dd>Test model: difficulty and discrimination.</dd>
+        <dt id="g-eig">Info gain</dt><dd>Picks the most informative match next.</dd>
+        <dt id="g-ci">Interval</dt><dd>Plausible range under the fitted model.</dd>
+        <dt id="g-saturation">Saturation</dt><dd>Top scores near 100%: no longer separates models.</dd>
+      </dl>
+    </div>
+    <button type="button" aria-expanded="false" aria-controls="gloss-box" aria-label="Glossary"><i class="fa-solid fa-book-open"></i><span>Glossary</span></button>
+  </aside>
+  <div class="term-tip" id="term-tip" role="tooltip"></div>
+
+</div>
+<footer class="footer" id="site-footer"></footer>
+<script type="module" src="../../assets/js/blog-cyberarena.js"></script>
+</body>
+</html>

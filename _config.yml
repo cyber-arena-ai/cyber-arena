@@ -1,0 +1,9 @@
+# GitHub Pages builds this repo with Jekyll. The site is plain HTML, so the only job
+# here is to keep the repository's own files (agent guide, README, citation, tools)
+# out of the published site.
+exclude:
+  - CLAUDE.md
+  - README.md
+  - CITATION.cff
+  - tools/
+  - assets/img/readme/

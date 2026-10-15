@@ -1,0 +1,293 @@
+/* CyberArena — shared Riso Zine base
+   Tokens, reset, page chrome (nav, masthead, headline, filters, colophon),
+   page transitions and the shared "print plate" interactions.
+   Fonts are loaded via <link rel="preconnect"> in each page's <head>. */
+
+:root{
+  --paper:#F7F3EC; --paper2:#FFFDF8; --ink:#1A1A1A;
+  --blue:#2540FF; --pink:#FF3D7F; --purple:#6B2BD9; --green:#0E9E6E;
+  --mut:#8a857c; --line:#e4ddcd;
+  /* motion — one vocabulary for the whole site. OUT settles, SPRING overshoots
+     a hair (stamps, pills), PRESS is the instant ink-on-paper push. */
+  --ease-out:cubic-bezier(.2,.8,.2,1);
+  --ease-spring:cubic-bezier(.2,1.35,.4,1);
+  --ease-in:cubic-bezier(.4,0,.8,.2);
+  --t-press:.12s; --t-ui:.24s; --t-move:.5s;
+  /* The pointer (--mx/--my, -1..1) is NOT set here. fx.js writes it only on the
+     few elements that lean ([data-lean], .mast h1): a custom property on <html>
+     is inherited by every element, so writing it per frame restyled the whole
+     page on every scroll and mouse frame. */
+  --nav-h:60px;      /* the header's exact height: 11 + 36 + 11 + its 2px rule */
+  --gx:22px;         /* the side gutter, the same for the header and every page body */
+}
+@media(max-width:760px){ :root{ --gx:16px } }
+*{box-sizing:border-box;margin:0;padding:0}
+/* paint the page background on <html> too, so navigation between views never
+   flashes the browser's default white between unload and first paint */
+/* scrollbar-gutter: a page that is briefly shorter than the screen (mid-switch)
+   must not drop its scrollbar and shift everything sideways */
+html{scroll-behavior:smooth;background:var(--paper);color-scheme:light;scroll-padding-top:var(--nav-h);scrollbar-gutter:stable}
+body{
+  font-family:'Hanken Grotesk',sans-serif;background:transparent;color:var(--ink);   /* html paints the paper, under the grid */
+  min-height:100vh;padding:0;position:relative;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+::selection{background:var(--ink);color:var(--paper)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+/* graph-paper ground: a faint 28px grid fixed to the window, under everything */
+html::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.045;
+  background-image:linear-gradient(#1a1a1a 1px,transparent 1px),linear-gradient(90deg,#1a1a1a 1px,transparent 1px);
+  background-size:28px 28px}
+/* the lamp: a 380px disc of the same grid in pink that follows the pointer (chrome.js moves it
+   with a transform and counter-shifts its background so its lines stay on the window grid) */
+.bg-lamp{position:fixed;left:0;top:0;width:380px;height:380px;z-index:-1;pointer-events:none;opacity:0;
+  background-image:linear-gradient(#FF3D7F 1px,transparent 1px),linear-gradient(90deg,#FF3D7F 1px,transparent 1px);
+  background-size:28px 28px;-webkit-mask:radial-gradient(circle closest-side,#000,transparent);
+  mask:radial-gradient(circle closest-side,#000,transparent);transition:opacity .35s var(--ease-out);will-change:transform}
+.bg-lamp.on{opacity:.28}
+@media (hover:none),(prefers-reduced-motion:reduce){.bg-lamp{display:none}}
+/* paper grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;z-index:99;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* the gutter lives on .wrap, not on <body>: the header and the page then share
+   one geometry with no negative-margin bleeds, on every page */
+.wrap{width:min(1000px, 100% - 2 * var(--gx));margin:0 auto}
+
+/* ---- header ----
+   ONE header on every page: <header class="topbar" id="site-top"> is the first
+   thing in <body>, full width, solid paper with a printed rule, and the SAME
+   node across in-place navigations (chrome.js keeps it mounted), so nothing in
+   it can move or blink when the page under it changes. Its height is fixed
+   (--nav-h) so sticky bars below it can dock exactly. */
+.topbar{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
+/* 58px of bar (border-box: padding included) + the 2px rule = --nav-h; the
+   content is centred in it, so the space above and below is always equal */
+.nav{display:flex;justify-content:space-between;align-items:center;align-content:center;flex-wrap:wrap;column-gap:10px;row-gap:0;
+  min-height:58px;padding:8px 0}
+.brand{font-weight:900;font-size:20px;letter-spacing:-.5px;text-transform:uppercase;text-decoration:none;color:var(--ink)}
+.brand em{color:var(--pink);font-style:normal}
+
+.navlinks{display:flex;gap:4px;align-items:center}
+.navlinks a,.navgroup > button{font:600 14px/1.2 'Hanken Grotesk',sans-serif;color:var(--ink);text-decoration:none;
+  padding:5px 13px;border:2px solid transparent;border-radius:30px;background:none;cursor:pointer;
+  transition:border-color var(--t-ui) var(--ease-out),background-color var(--t-ui)}
+.navlinks a:hover,.navgroup > button:hover,.navgroup.open > button{border-color:var(--ink)}
+.navlinks > a.active,.navgroup.active > button{background:var(--ink);color:var(--paper)}
+.navgroup > button{display:inline-flex;align-items:center;gap:6px}
+.navgroup .car{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:5px solid currentColor;transition:transform var(--t-ui) var(--ease-out)}
+.navgroup.open .car{transform:rotate(180deg)}
+
+/* ---- the Arena submenu — a printed slip that drops under its pill ---- */
+.navgroup{position:relative}
+.navmenu{position:absolute;top:calc(100% + 10px);left:50%;z-index:50;width:200px;
+  background:var(--paper2);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:6px;
+  opacity:0;visibility:hidden;transform:translate(-50%,-6px) rotate(-.6deg);transform-origin:top center;
+  transition:opacity var(--t-ui) var(--ease-out),transform var(--t-ui) var(--ease-spring),visibility 0s linear var(--t-ui)}
+/* a bridge over the gap, so moving the pointer from the pill to the slip never closes it */
+.navmenu::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}
+.navgroup.open .navmenu{opacity:1;visibility:visible;transform:translate(-50%,0) rotate(0);
+  transition:opacity var(--t-ui) var(--ease-out),transform var(--t-ui) var(--ease-spring),visibility 0s}
+.navmenu a{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:center;
+  padding:7px 10px;border:0;border-radius:0;color:var(--ink);text-decoration:none}
+.navmenu a + a{border-top:2px solid var(--line)}
+.navmenu a i{width:28px;height:28px;display:grid;place-items:center;font-size:12.5px;
+  background:var(--ink);color:var(--paper);box-shadow:2px 2px 0 var(--pink);
+  transition:transform var(--t-ui) var(--ease-spring),box-shadow var(--t-ui)}
+.navmenu a i.img img{width:15px;height:15px;display:block}
+.navmenu a b{font-weight:800;font-size:14.5px}
+.navmenu a:hover{background:#f1ebde}
+.navmenu a:hover i{transform:rotate(-6deg);box-shadow:3px 3px 0 var(--blue)}
+.navmenu b .arw{font-size:.8em;margin-left:5px}
+.navmenu a.active b{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:3px;text-decoration-color:var(--pink)}
+
+/* mobile: the links fold behind a burger icon (toggled by chrome.js) */
+.nav-burger{display:none;background:var(--paper2);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+  padding:5px 7px;cursor:pointer;transition:transform var(--t-press),box-shadow var(--t-press)}
+.nav-burger span{display:block;width:18px;height:3px;background:var(--ink);margin:3px 0;
+  transition:transform var(--t-ui) var(--ease-out),opacity var(--t-ui)}
+.nav-burger:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.nav.open .nav-burger span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.nav.open .nav-burger span:nth-child(2){opacity:0}
+.nav.open .nav-burger span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(max-width:900px){
+  .nav-burger{display:block}
+  .navlinks{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px;margin-top:0;
+    max-height:0;overflow:hidden;opacity:0;
+    transition:max-height .38s var(--ease-out),opacity .25s,margin-top .38s var(--ease-out)}
+  .nav.open .navlinks{max-height:520px;opacity:1;margin-top:12px;padding:0 4px 6px 0}
+  .navlinks a,.navgroup > button{border:2px solid var(--ink);border-radius:0;background:var(--paper2);
+    padding:9px 14px;box-shadow:3px 3px 0 var(--ink)}
+  .navlinks a:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .navlinks > a.active{background:var(--ink)}
+  /* the group becomes a labelled pair spanning the full row: no dropdown on touch */
+  .navgroup{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .navgroup > button{display:none}
+  .navgroup::before{content:attr(data-label);grid-column:1/-1;font:800 10.5px/1 'Hanken Grotesk';
+    letter-spacing:1.5px;text-transform:uppercase;color:#7a7468;padding:6px 2px 0}
+  .navmenu{position:static;display:contents;opacity:1;visibility:visible;transform:none;width:auto;
+    background:none;border:0;box-shadow:none;padding:0}
+  .navmenu a{display:flex;gap:10px;padding:6px 10px}
+  .navmenu a + a{border-top:2px solid var(--ink)}
+  .navmenu a i{width:24px;height:24px;font-size:11px;box-shadow:none}
+  .navmenu a i.img img{width:12px;height:12px}
+  .navmenu a.active{background:var(--ink);color:var(--paper)}
+  .navmenu a.active i{background:var(--paper);color:var(--ink)}
+  .navmenu a.active b{text-decoration:none}
+}
+
+/* ---- entrant icon (assets/js/entrant-icon.js) ----
+   Pixel art: never smoothed, never squashed; sits on the text baseline. */
+.eicon{display:inline-block;flex:none;image-rendering:pixelated;vertical-align:-.12em}
+/* the reversed badge in a line of text: exactly as tall as the font, on the baseline's
+   descender so it spans the same band the letters do, and a word-space after it */
+.eicon.rev{height:1em;width:auto;vertical-align:-.16em;margin-right:.35em}
+
+/* ---- masthead ---- */
+/* no rule under the masthead: the header's rule is right above it, and a second
+   heavy line 90px lower only boxed the title in. Space separates it instead. */
+.mast{padding:34px 0 6px;display:flex;justify-content:center;align-items:flex-end;flex-wrap:wrap;gap:10px}
+.kicker{font-weight:700;font-size:11px;line-height:1.5;text-transform:uppercase;letter-spacing:1.5px;color:#6f6657}
+/* the two side kickers take equal, content-independent width so the title is
+   the true center of the line — and never repositions when JS fills a kicker */
+.mast > .kicker{flex:1 1 0;min-width:0}
+.mast h1{--mx:0;--my:0;flex:0 0 auto;text-align:center;font-size:50px;font-weight:900;letter-spacing:-1.5px;line-height:.9;text-transform:uppercase;
+  /* the second plate: a faint pink pass printed slightly off, drifting with the pointer */
+  text-shadow:calc(2px + var(--mx) * 2px) calc(2px + var(--my) * 1.5px) 0 rgba(255,61,127,.32)}
+.mast h1 em{color:var(--pink);font-style:normal}
+
+/* ---- Arena sub-tabs: Runs | Games are siblings, so each page carries the switch ---- */
+.subtabs{display:flex;justify-content:center;margin:16px 0 0}
+.subtabs nav{display:inline-flex;border:2px solid var(--ink);background:var(--paper2);box-shadow:4px 4px 0 var(--ink)}
+.subtabs a{position:relative;display:inline-flex;align-items:center;gap:8px;padding:7px 18px;
+  font-weight:800;font-size:13.5px;color:var(--ink);text-decoration:none}
+.subtabs a + a{border-left:2px solid var(--ink)}
+.subtabs a i{font-size:12px}
+.subtabs a:hover{background:#f1ebde}
+.subtabs a.on{background:var(--ink);color:var(--paper)}
+
+/* ---- headline / dek ---- */
+.headline{margin:26px 0 8px}
+.headline h2{font-size:40px;font-weight:900;letter-spacing:-1px;line-height:1.02;max-width:840px}
+.headline h2 mark{background:var(--blue);color:var(--paper);padding:0 6px}
+.dek{font-weight:500;font-size:16px;margin-top:12px;color:#454545;max-width:760px;line-height:1.5}
+.dek b{background:var(--blue);color:var(--paper);padding:0 6px;font-family:'Hanken Grotesk';font-weight:800}
+.dek b.p{background:var(--pink)}
+
+/* ---- section head + filters ---- */
+/* a section head is a label row, not a rule: what follows it is almost always a
+   framed box, and an underline on top of that frame read as a doubled line */
+.sech{font-weight:800;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#7a7468;margin:44px 0 12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.filt{display:flex;gap:8px;flex-wrap:wrap}
+.filt button{font-weight:600;font-size:12.5px;background:none;border:2px solid var(--ink);border-radius:30px;padding:4px 13px;cursor:pointer;color:var(--ink);
+  transition:background-color var(--t-ui) var(--ease-out),color var(--t-ui),transform var(--t-press)}
+.filt button:hover{background:rgba(26,26,26,.06)}
+.filt button:active{transform:scale(.96)}
+.filt button.on{background:var(--ink);color:var(--paper)}
+
+/* ---- pager (paged lists: runs archive, games grid) ---- */
+.pager{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:26px 0 4px}
+.pager button{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;min-width:34px;background:none;border:2px solid var(--ink);border-radius:30px;padding:4px 10px;cursor:pointer;color:var(--ink);
+  transition:background-color var(--t-ui),transform var(--t-press)}
+.pager button:hover:not(:disabled):not(.on){background:rgba(26,26,26,.06)}
+.pager button:active:not(:disabled){transform:scale(.94)}
+.pager button.on{background:var(--ink);color:var(--paper)}
+.pager button:disabled{opacity:.3;cursor:default}
+.pager .gap{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mut)}
+
+/* ---- the arrow — one rounded-stroke glyph for every arrow on the site.
+   A currentColor mask, so it inherits text color and scales with font-size.
+   Default points right; .up is the 45° external-link arrow. ---- */
+.arw{display:inline-block;width:1em;height:1em;vertical-align:-.12em;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12h15M12 5l7 7-7 7' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12h15M12 5l7 7-7 7' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition:transform var(--t-ui) var(--ease-spring)}
+.arw.up{transform:rotate(-45deg)}
+a:hover > .arw:not(.up),a:hover .arw:not(.up){transform:translateX(3px)}
+
+/* ---- shared plate interaction ----
+   .plate: a framed box whose hard shadow leans away from the pointer, as if lit
+   by it (fx.js writes --lx/--ly per element, -1..1). Nothing else moves, so a
+   page of them stays quiet. --sh is the shadow depth, --shc its colour. */
+/* registered as NOT inherited: a plate can wrap a whole list (the runs ledger),
+   and an inherited property written per frame would restyle every row in it */
+@property --lx{syntax:'<number>';inherits:false;initial-value:0}
+@property --ly{syntax:'<number>';inherits:false;initial-value:0}
+.plate{--sh:6px;--shc:var(--ink);
+  box-shadow:calc(var(--sh) - var(--lx) * 2.5px) calc(var(--sh) - var(--ly) * 2.5px) 0 var(--shc);
+  transition:transform var(--t-press) var(--ease-out)}
+/* .press: a clickable plate that sinks into the paper under the finger */
+.press:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--shc,var(--ink))}
+
+.colophon{font-weight:500;font-size:13px;text-align:center;margin:24px 0 6px;color:#777}
+
+/* ---- footer: the header's twin (injected by assets/js/chrome.js) ----
+   Same full-width paper bar, same 2px rule (on top), same height and gutter,
+   same wordmark and link pills — only not sticky. */
+.footer{margin-top:72px;background:var(--paper);border-top:2px solid var(--ink)}
+/* on a page shorter than the window the footer settles at the window's bottom edge (body is
+   min-height:100vh); on a longer one it stays where it is, last in the body. Not the homepage's,
+   which lives inside its last full-height chapter. */
+body > .footer{position:sticky;top:100vh}
+.foot-in{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:6px;
+  min-height:58px;padding:8px 0}
+.foot-in .brand small{font-size:11px;font-weight:700;letter-spacing:.5px;color:#7a7468;margin-left:10px;vertical-align:2px}
+.foot-links{display:flex;gap:4px;flex-wrap:wrap}
+.foot-links a{font:600 14px/1.2 'Hanken Grotesk',sans-serif;color:var(--ink);text-decoration:none;
+  padding:5px 13px;border:2px solid transparent;border-radius:30px;transition:border-color var(--t-ui) var(--ease-out)}
+.foot-links a:hover{border-color:var(--ink)}
+@media(max-width:560px){ .foot-in{padding:14px 0} .foot-links{margin-left:-13px} }
+.brand em.b{color:var(--blue)}
+
+@media(max-width:760px){
+  .mast h1{font-size:32px}
+  .headline h2{font-size:27px}
+}
+
+
+/* ---- dropdown (shared: runs archive + leaderboard) ----
+   Hand-built, not a native <select>: the browser control cannot take the riso
+   treatment (ink border, hard offset shadow, mono counts) and looked foreign on
+   every page. Keyboard behaviour is reimplemented in util.js:dropdown — arrows,
+   Home/End, Enter, Escape — because dropping the native element means dropping
+   what it gave us for free. */
+.cpick{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
+.cpick .cplabel{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--mut)}
+.dd{position:relative;display:inline-block}
+.dd-btn{display:inline-flex;align-items:center;gap:9px;font-family:inherit;
+  font-weight:700;font-size:12.5px;color:var(--ink);background:var(--paper2);
+  border:2px solid var(--ink);padding:5px 12px;cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);max-width:min(66vw,360px);
+  transition:background-color var(--t-ui),color var(--t-ui),transform var(--t-press),box-shadow var(--t-press)}
+.dd-btn .dd-cur{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-btn b{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:.7}
+.dd-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.dd-btn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.dd[data-open="true"] .dd-btn{background:var(--ink);color:var(--paper)}
+.dd-car{flex:none;width:0;height:0;border-left:5px solid transparent;
+  border-right:5px solid transparent;border-top:6px solid currentColor;transition:transform var(--t-ui) var(--ease-out)}
+.dd[data-open="true"] .dd-car{transform:rotate(180deg)}
+.dd-menu{position:absolute;z-index:60;top:calc(100% + 7px);left:0;min-width:100%;
+  max-height:330px;overflow-y:auto;margin:0;padding:0;list-style:none;
+  background:var(--paper2);border:2px solid var(--ink);box-shadow:5px 5px 0 var(--ink);
+  transform-origin:top left;animation:ddIn var(--t-ui) var(--ease-spring)}
+@keyframes ddIn{from{opacity:0;transform:translateY(-6px) rotate(-.8deg)}}
+.dd[data-open="false"] .dd-menu{display:none}
+.dd-menu li{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+  border-bottom:2px solid var(--line)}
+.dd-menu li:last-child{border-bottom:0}
+.dd-menu li b{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;opacity:.7}
+.dd-menu li.act{background:#efe9dc}
+.dd-menu li.on{background:var(--ink);color:var(--paper)}
+.dd-menu li.on b{opacity:.85}
+.dd-menu li .dd-tag{font-size:9.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;background:#DED8CB;color:#6F6657;border-radius:2px;padding:1px 5px}
+/* on the selected (ink) row the block would vanish into the dark ground */
+.dd-menu li.on .dd-tag{background:rgba(247,243,236,.22);color:var(--paper)}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important;animation-iteration-count:1 !important}
+  html{scroll-behavior:auto}
+}

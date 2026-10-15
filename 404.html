@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>CyberArena — Not found</title>
+<!-- GitHub Pages serves this file for any missing path. Pages used to live at the
+     site root (/leaderboard.html, /blog/…); they now live under /pages/. Old links,
+     bookmarks and the Hugging Face Space's iframe (/leaderboard.html?embed=1) are
+     forwarded with their query and hash before anything renders. -->
+<script>
+(function(){
+  var MOVED = ['about', 'blogs', 'entrants', 'games', 'leaderboard', 'runs', 'trajectory', 'bead-icons', 'og-lab'];
+  var p = location.pathname, to = null, m;
+  if ((m = p.match(/^\/([a-z-]+)\.html$/)) && MOVED.indexOf(m[1]) >= 0) to = '/pages/' + m[1] + '.html';
+  else if ((m = p.match(/^\/blog\/(.+)$/))) to = '/pages/blog/' + m[1];
+  else if (p === '/analysis_mc_v1.html') to = '/pages/leaderboard.html';   // folded into the leaderboard
+  if (to) location.replace(to + location.search + location.hash);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/assets/css/base.css">
+</head>
+<body>
+<header class="topbar" id="site-top"><div class="wrap"><nav class="nav" id="site-nav"></nav></div></header>
+<script src="/assets/js/chrome.js"></script>
+<div class="wrap">
+  <div class="mast"><h1>Not found</h1></div>
+  <p class="dek">There is no page at this address. Try the <a href="/">homepage</a> or the
+  <a href="/pages/leaderboard.html">leaderboard</a>.</p>
+</div>
+<footer class="footer" id="site-footer"></footer>
+</body>
+</html>

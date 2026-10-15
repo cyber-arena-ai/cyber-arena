@@ -1,0 +1,122 @@
+// One match as a row of the results ledger: date, name, the two entrants,
+// score, verdict. Shared by the Runs page and the Entrants page, so the two
+// lists cannot drift apart. Styles: assets/css/runs.css (.run and friends).
+//
+//   const R = runRows(H);  R.row(run, i) -> '<a class="run …">'   R.STATES, R.isSolo, R.durText
+import { fmtTime, runSeconds, esc } from './util.js';
+import { entrantIcon } from './entrant-icon.js';
+
+// A `solo` run has ONE agent: the orchestrator fills the opposing seat with an
+// `idle` placeholder, which is not a competitor and must never be rendered as one.
+export const isSolo = r => r.mode === 'solo';
+
+export function runRows(H){
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dateLabel = (d, t) => {
+    const [, m, day] = (d || '2026-01-01').split('-');
+    return `<b>${MONTHS[+m-1]} ${+day}</b>${t || ''}`;
+  };
+  // ONE table, driving both the row tags and the filter chips — they were two
+  // parallel copies of the same axis->label map, so a value added to one showed
+  // up as a tag with no chip, or a chip whose count never matched the rows.
+  //
+  // Each entry names the ONE field it tests. That is the point of the three
+  // axes: a count is the truth about its own axis rather than whatever a
+  // priority chain let through. The entries are NOT mutually exclusive, so a run
+  // carries every tag that matches — it can be cancelled AND unreadable, and
+  // saying only one of those was the flaw in the merged `display` value it
+  // replaced.
+  //
+  // Only outcomes the archive query admits are listed. `runs.js` asks for
+  // `outcome=succeeded,running&parse=ok`, so chips for `failed`, `canceled`,
+  // `parse=pending` and `parse=failed` could never match — widen the query first
+  // if you want them back.
+  const STATES = [
+    { key: 'all',             label: 'all',             hit: () => true },
+    { key: 'live',            label: 'live',             hit: r => r.outcome === 'running',
+      tag: '<span class="stag live-tag"><i class="fa-solid fa-circle"></i> LIVE</span>' },
+    { key: 'finished',        label: 'finished',        hit: r => r.outcome === 'succeeded' },
+    { key: 'analysis_failed', label: 'analysis failed', hit: r => r.analysis === 'failed',
+      tag: '<span class="stag anafail-tag" title="deep analysis gave up after retries">analysis failed</span>' },
+  ];
+  const statusTag = r => STATES.filter(s => s.tag && s.hit(r)).map(s => s.tag).join('');
+  // only flag hint mode (agents got the vuln hint); hard mode is the default and
+  // stays untagged
+  const modeTag = r =>
+    r.hint === true ? `<span class="stag hint-tag" title="hint mode — agents were given the vulnerability hint">hint</span>` : '';
+
+  // solo: one agent, so its capture count is the whole result — a "100 – 0"
+  // against an idle seat would imply an opponent that was never there
+  const captured = r => (r.attack_flags?.team1 || 0) > 0;
+  function scoreHTML(r, h1, h2){
+    if(isSolo(r)){
+      const s = captured(r) ? `style="color:${h1.color}"` : 'class="lo"';
+      return `<span ${s}>${r.score.team1}</span>`;
+    }
+    const s1 = r.winner === 'team1' ? `style="color:${h1.color}"` : 'class="lo"';
+    const s2 = r.winner === 'team2' ? `style="color:${h2.color}"` : 'class="lo"';
+    return `<span ${s1}>${r.score.team1}</span><span class="dash">–</span><span ${s2}>${r.score.team2}</span>`;
+  }
+  function winTag(r, hw, duo, win){
+    // a solo run is won or drawn against nobody — report what it actually did
+    if(isSolo(r)) return captured(r)
+      ? `<span class="tag" style="background:${duo};color:var(--paper);border-color:var(--ink)">Captured</span>`
+      : `<span class="tag draw">No capture</span>`;
+    if(r.winner === 'draw') return `<span class="tag draw">Draw</span>`;
+    // WHAT won, not what drove it: the model's family. Harness and vendor answer
+    // different questions and both are already on the row above — the harness as
+    // the chip beside each model, the vendor as the colour everything wears.
+    const me = win === 'team1' ? r.teams.team1 : r.teams.team2;
+    const you = win === 'team1' ? r.teams.team2 : r.teams.team1;
+    const fam = H.familyOf(me);
+    // A family is shorthand, and shorthand fails when both sides share it —
+    // `claude-opus-5` vs `claude-sonnet-4-6` is fine, two Opus revisions are not.
+    // Name the model outright in that case rather than print a tag that cannot
+    // say who won.
+    const clash = fam && H.familyOf(you)?.id === fam.id;
+    const text = (!fam || clash) ? H.bareModel(me.model) : fam.label;
+    // the tag wears the winner's own combo color (model|harness duo, solid when
+    // they agree) — not the per-team accent, which is stock blue/pink today
+    return `<span class="tag" style="background:${duo};color:var(--paper);border-color:var(--ink)" title="${H.bareModel(me.model)} on ${hw.fullName}">${text}</span>`;
+  }
+
+  // A running match's duration is elapsed WALL time, not `duration_s` — that
+  // field is the time of the last scoreboard event, so a live row sat at 3:13
+  // while the match was really 16:29 old, and never moved between page loads.
+  // Live rows are marked so the ticker below can refresh them every second.
+  const durText = r => {
+    const s = runSeconds(r);
+    return s === null ? 'just started' : fmtTime(s);
+  };
+  const durHTML = r => r.outcome === 'running'
+    ? `<span class="rdur" data-run="${r.id}">${durText(r)}</span>`
+    : durText(r);
+
+  function row(r, i = 0){
+    // distinctPair: same-harness matchups still get two tellable-apart accents.
+    // Resolve each team's duo gradient once and reuse it (vs-line + win tag).
+    const solo = isSolo(r);
+    const [h1, h2] = solo ? [H.get(r.teams.team1), null]
+                          : H.distinctPair(r.teams.team1, r.teams.team2);
+    const d1 = H.duoCSS(r.teams.team1), d2 = solo ? null : H.duoCSS(r.teams.team2);
+    const win = !solo && r.winner && r.winner !== 'draw' ? r.winner : null;
+    const hw = win === 'team1' ? h1 : win === 'team2' ? h2 : null;
+    const ent = (t, h, d, c) =>
+      `${entrantIcon(H, t, 0, { inline: true, cls: c })}${t.model}<i class="hb" title="${h.fullName}">${h.shortName}</i>`;
+    const inner = `
+      <div class="rdate">${dateLabel(r.date, r.time)}</div>
+      <div>
+        <div class="rname">${r.name}${r.category ? ` <span class="badge ${r.category.toLowerCase()}">${r.category}</span>` : ''} ${modeTag(r)}${statusTag(r)}</div>
+        <div class="rmeta">${r.challenge} · ${r.rounds} rounds · ${durHTML(r)}${r.campaign ? ` · <span class="cmp" title="commissioned by the ${esc(r.campaign.type)} campaign &quot;${esc(r.campaign.id)}&quot;">${esc(r.campaign.id)}</span>` : ''}</div>
+        <div class="rvs">${ent(r.teams.team1, h1, d1, 'c1')}${solo
+          ? ` <span class="vs">solo run</span>`
+          : ` <span class="vs">vs</span> ${ent(r.teams.team2, h2, d2, 'c2')}`}</div>
+      </div>
+      <div class="rscore">${scoreHTML(r, h1, h2)}</div>
+      <div class="rwin">${(solo || r.winner) ? winTag(r, hw, win === 'team2' ? d2 : d1, win) : ''}<span class="rounds">${r.outcome === 'running' ? 'watch live' : 'view thread'}</span></div>
+      <div class="rgo"><i class="arw"></i></div>`;
+    // stagger the float-in, capped so long ?limit=0 lists don't crawl
+    return `<a class="run live" style="--d:${Math.min(i, 12) * 70}ms" href="trajectory.html?run=${r.id}">${inner}</a>`;
+  }
+  return { row, STATES, isSolo, durText };
+}

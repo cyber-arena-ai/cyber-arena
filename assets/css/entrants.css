@@ -1,0 +1,89 @@
+/* Entrants — two corner seats over the roster, then the games of whoever sits
+   there. Rows reuse runs.css (.runs / .run). Behaviour: assets/js/entrants.js. */
+
+/* ---- the roster: compact, unframed — creature, name, harness · games ---- */
+.sech .cnt{font-weight:600;letter-spacing:.5px;text-transform:none;color:#9a9282}
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:2px 14px;background:var(--paper2);border:2px solid var(--ink);padding:10px 14px}
+.ent{position:relative;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 4px;min-width:0;
+  background:none;border:0;cursor:pointer;font:inherit;color:var(--ink);text-align:left;
+  transition:background-color var(--t-ui)}
+.ent:hover{background:rgba(26,26,26,.05)}
+.ent:hover .ent-ic{animation:hop .45s var(--ease-out)}
+@keyframes hop{40%{transform:translateY(-5px)}}
+.ent:active .ent-ic{transform:scale(.92)}
+.ent:focus-visible{outline:2px solid var(--blue);outline-offset:0}
+.ent-ic{flex:none;line-height:0}
+.ent-tx{display:flex;flex-direction:column;min-width:0}
+.ent-nm{font:700 12.5px/1.25 'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ent-hn{font-size:11px;font-weight:600;color:#8a8378;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* in the ring: a corner-coloured bar on the left edge (both, for a self-match) */
+.ent-at{position:absolute;left:-6px;top:6px;bottom:6px;width:4px}
+.ent-at.s0{background:var(--blue)}
+.ent-at.s1{background:var(--pink);left:-2px}
+.ent.seated{background:rgba(26,26,26,.04)}
+/* waiting for a pick: the roster says so */
+.roster.waiting .ent-ic{animation:none}
+
+/* ---- the ring: the illustration, two spots placed on its mat ---- */
+.arena{margin-top:30px}
+.ring{position:relative;line-height:0;max-width:600px;margin:0 auto}
+.ring-art{display:block;width:100%;height:auto;overflow:visible}
+
+/* a spot: its bottom edge sits on the floor point (left/top in %); the fighter
+   stands on a painted circle on the mat */
+.spot{--seat:var(--blue);position:absolute;width:19%;aspect-ratio:1/1.05;transform:translate(-50%,-100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;outline:none}
+.spot.s1{--seat:var(--pink)}
+/* no circle on the mat in any state: the nameplate above says which corner is waiting */
+.sitter{position:relative;display:block;width:72%;line-height:0;margin-bottom:0;transform-origin:50% 100%;
+  animation:bob 2.4s ease-in-out infinite}
+.sitter svg{width:100%;height:auto}
+@keyframes bob{50%{transform:translateY(-4%)}}
+/* the landing after the hop: squash, rebound, settle — then the idle bob */
+.sitter.land{animation:land .5s var(--ease-out),bob 2.4s ease-in-out .5s infinite}
+@keyframes land{0%{transform:scale(1.14,.76)}40%{transform:scale(.94,1.1) translateY(-8%)}75%{transform:scale(1.03,.97)}100%{transform:none}}
+.flyer{position:fixed;z-index:80;pointer-events:none;line-height:0;transform-origin:0 0}
+.flyer svg{width:100%;height:auto}
+
+/* ---- nameplates over the ring: blue corner | VS + die | pink corner ---- */
+.plates{display:grid;grid-template-columns:1fr 96px 1fr;align-items:stretch;margin-bottom:10px}
+.plate-n{--seat:var(--blue);position:relative;padding:12px 16px;border-left:6px solid var(--seat);cursor:pointer;min-width:0}
+.plate-n.s1{--seat:var(--pink);border-left:0;border-right:6px solid var(--seat);text-align:right}
+.plate-n .seat-no{display:block;font:800 10.5px/1 'Hanken Grotesk';letter-spacing:1.4px;text-transform:uppercase;color:var(--seat);margin-bottom:6px}
+.plate-n b{display:block;font-weight:900;font-size:18px;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate-n em{display:block;font-style:normal;font-size:12px;font-weight:600;color:#7a7468;margin-top:2px}
+.plate-n:not(.full) b{color:#8a8378;font-weight:800}
+.plate-n.armed:not(.full) b{color:var(--seat)}
+.seat-x{position:absolute;top:8px;right:10px;width:26px;height:26px;display:grid;place-items:center;
+  font:700 18px/1 'Hanken Grotesk';color:var(--ink);border:2px solid transparent;border-radius:50%;cursor:pointer}
+.plate-n.s1 .seat-x{right:auto;left:10px}
+.seat-x:hover{border-color:var(--ink)}
+.plates-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.plates-mid .vs{font-weight:900;font-size:20px;letter-spacing:1px}
+.dice{--sh:3px;--shc:var(--pink);width:40px;height:40px;display:grid;place-items:center;font-size:17px;cursor:pointer;
+  color:var(--ink);background:var(--paper2);border:2px solid var(--ink)}
+.dice i{transition:transform var(--t-ui) var(--ease-spring)}
+.dice:hover i{transform:rotate(-20deg)}
+
+.hint{min-height:20px;margin-top:6px;text-align:center;font-size:13px;font-weight:600;color:#b0472e}
+
+/* ---- the games ---- */
+#ghead .vs{font-style:normal;color:#9a9282;margin:0 4px}
+.g-rec{margin-left:12px;font-weight:700;letter-spacing:.5px;color:#7a7468}
+.g-rec b{color:var(--ink)}
+.g-empty{padding:34px 20px;text-align:center;font-size:14.5px;line-height:1.55;color:#6f6657;
+  border:2px dashed #bcb4a4}
+.g-empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+@media(max-width:760px){
+  .spot{width:20%}
+  .plates{grid-template-columns:1fr 60px 1fr}
+  .plate-n{padding:10px 10px}
+  .plate-n b{font-size:14px}
+  .plate-n em{font-size:11px}
+  .roster{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+  .sitter,.sitter.land,.ent:hover .ent-ic{animation:none}
+}

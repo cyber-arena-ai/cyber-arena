@@ -1,0 +1,19 @@
+/* The institutions conveyor — one component, used by the homepage and About.
+   Logo crates ride a black capsule belt whose wheels spin in place (side view).
+   Behaviour: assets/js/belt.js. */
+.convey{position:relative;overflow:hidden}
+.belt-items{overflow:hidden}
+/* moved by belt.js (rAF), not a CSS keyframe; hovering a crate pauses it */
+.belt-track{display:flex;align-items:flex-end;gap:26px;width:max-content;padding:12px 9px 9px;will-change:transform}
+.inst{flex:0 0 auto;width:172px;text-align:center;border:2px solid var(--ink);background:var(--paper2);
+  box-shadow:4px 4px 0 var(--ink);padding:12px 12px 9px;text-decoration:none;color:inherit;
+  transition:transform .3s var(--ease-spring),box-shadow .3s var(--ease-out)}
+.inst:hover{transform:translateY(-6px) rotate(-1.5deg);box-shadow:6px 8px 0 var(--ink)}
+.inst img{display:block;width:100%;height:64px;object-fit:contain;margin:0 auto}
+.inst .nm{font-weight:900;font-size:11.5px;text-transform:uppercase;margin-top:9px;letter-spacing:-.2px}
+.band{position:relative;height:32px;background:var(--ink);border-radius:999px}
+.rollers{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 8px}
+.roller{width:20px;height:20px;border-radius:50%;background:var(--paper2);position:relative;transform:rotate(var(--wheel,0deg))}
+.roller::before{content:"";position:absolute;left:50%;top:2px;bottom:2px;width:3px;margin-left:-1.5px;background:var(--ink);border-radius:2px}
+.roller::after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px;background:var(--ink);border-radius:50%}
+@media(prefers-reduced-motion:reduce){ .belt-track{flex-wrap:wrap;justify-content:center} }

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberArena — Blogs</title>
+<meta name="description" content="Writing from the CyberArena team — technical reports and notes from the arena.">
+<link rel="canonical" href="https://cyber-arena.ai/pages/blogs.html">
+<meta property="og:site_name" content="CyberArena">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://cyber-arena.ai/pages/blogs.html">
+<meta property="og:title" content="CyberArena — Blogs">
+<meta property="og:description" content="Writing from the CyberArena team — technical reports and notes from the arena.">
+<meta property="og:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta property="og:image" content="https://cyber-arena.ai/assets/img/og-square.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="630">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A riso-print robot fighter under the CYBER ARENA wordmark (square)">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta name="twitter:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta name="theme-color" content="#F7F3EC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="../assets/css/base.css">
+<style>
+/* Blogs — writing from the arena. Placeholder cards until posts land. */
+.posts{display:grid;grid-template-columns:1fr;gap:16px;margin-top:30px}
+/* a live card is an <a>, a placeholder an <article>; base.css has no global
+   link reset (each component does its own), so without this the linked card
+   renders blue and underlined */
+.post{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:20px;
+  border:2px solid var(--ink);background:var(--paper2);padding:20px 22px;box-shadow:6px 6px 0 var(--ink);
+  color:inherit;text-decoration:none}
+.post .pk{font:800 40px/1 'Hanken Grotesk',sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
+.post h3{font-size:24px;font-weight:900;letter-spacing:-.5px;line-height:1.05}
+.post .ptag{display:inline-block;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;
+  text-transform:uppercase;color:var(--paper);background:var(--purple);border:2px solid var(--ink);
+  padding:4px 8px;margin-bottom:8px}
+.post .ptag.findings{background:var(--green)}
+.post p{font-size:14px;color:#6a6456;margin-top:6px;line-height:1.5}
+/* fixed square so the arrow on a live post and the "coming soon" label on a
+   placeholder are the same size — content-sized boxes came out 68 vs 51 */
+.post .pgo{font:800 10.5px/1.5 'Hanken Grotesk',sans-serif;text-transform:uppercase;letter-spacing:1px;
+  color:var(--paper);background:var(--ink);border:2px solid var(--ink);
+  width:68px;height:68px;display:grid;place-items:center;
+  padding:10px;text-align:center;flex:none}
+.post .pgo .arw{width:26px;height:26px;vertical-align:0}
+/* a live card's button wears its own type colour, matching the .ptag and the
+   card's drop shadow; :not(.soon) keeps placeholders grey regardless of order */
+.post.findings:not(.soon) .pgo{background:var(--green)}
+.post:not(.soon):not(.findings) .pgo{background:var(--purple)}
+.post:not(.soon):not(.findings){box-shadow:6px 6px 0 var(--purple)}
+.post.soon{background:var(--paper);border-style:dashed;box-shadow:6px 6px 0 var(--purple);opacity:.95}
+.post.findings{box-shadow:6px 6px 0 var(--green)}
+.post.soon .pgo{background:#8a8378}
+@media(max-width:680px){
+  .post{grid-template-columns:1fr;text-align:left}
+  .post .pk{font-size:28px}
+  .post .pgo{justify-self:start}
+}
+</style>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="5809f7ec-470a-4bae-abcf-5737e7bb66a0"></script>
+</head>
+<body>
+<header class="topbar" id="site-top"><div class="wrap"><nav class="nav" id="site-nav"></nav></div></header>
+<script src="../assets/js/chrome.js"></script>
+<div class="wrap">
+
+  <div class="mast">
+    <h1>Blogs</h1>
+  </div>
+
+
+  <div class="posts">
+    <a class="post" href="blog/cyberarena.html">
+      <div class="pk">01</div>
+      <div>
+        <span class="ptag">Technical report</span>
+        <h3>CyberArena: Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat</h3>
+        <p>The game protocol, the ranking model and how challenges are built, with results from
+        466 ranked matches across 12 agents and 40 challenges.</p>
+      </div>
+      <span class="pgo"><i class="arw" aria-hidden="true"></i></span>
+    </a>
+
+    <!-- TODO: replace this placeholder with the real paper link once published -->
+    <article class="post soon findings">
+      <div class="pk">02</div>
+      <div>
+        <span class="ptag findings">Findings</span>
+        <h3>Gaming the arena: the scoring shortcuts agents tried</h3>
+        <p>What agents tried against the arena itself to score without solving the challenge,
+        and the few attempts that got through.</p>
+      </div>
+      <span class="pgo">Coming<br>soon</span>
+    </article>
+
+    <a class="post findings" href="blog/prompt-decides.html">
+      <div class="pk">03</div>
+      <div>
+        <span class="ptag findings">Findings</span>
+        <h3>Same model, two prompts: instructions decided who won</h3>
+        <p>One prompt told the agent it could pace itself, and it spent 40% of every match
+        idle. The replacement won 13 of 20 head-to-head matches against it.</p>
+      </div>
+      <span class="pgo"><i class="arw" aria-hidden="true"></i></span>
+    </a>
+  </div>
+
+</div>
+<footer class="footer" id="site-footer"></footer>
+</body>
+</html>

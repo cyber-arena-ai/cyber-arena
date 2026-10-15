@@ -1,0 +1,328 @@
+/* CyberArena — homepage. A short stack of full-height CHAPTERS that the page
+   snaps between; the chapter in focus is sharp, its neighbours recede (opacity,
+   a hair of scale written per frame by home.js; blur as a class, see .ch.out).
+   Extends base.css; the live strip under the hero buttons is assets/js/live-banner.js. */
+
+/* full-bleed hero needs the page not to scroll sideways (robots reach the edges) */
+html,body{overflow-x:clip}
+
+/* ---- snap ----
+   Mandatory where every chapter fits a screen (desktop); proximity on small or
+   short screens, where a chapter can be taller than the viewport and mandatory
+   snapping would fight the reader. Reduced motion keeps proximity: the snap is
+   a convenience, never a ride. */
+html.snap{scroll-snap-type:y proximity}
+@media(min-width:900px) and (min-height:640px) and (prefers-reduced-motion:no-preference){
+  html.snap{scroll-snap-type:y mandatory}
+}
+.ch{position:relative;min-height:calc(100svh - var(--nav-h));scroll-snap-align:start;
+  display:flex;flex-direction:column;justify-content:center;padding:9vh var(--gx)}
+/* the depth of field — the content dims and softens, the section box itself
+   does not (so the snap geometry never changes) */
+.ch-in{width:100%;max-width:1000px;margin:0 auto;transform-origin:50% 50%;will-change:opacity,transform;
+  transition:filter .45s var(--ease-out)}
+/* Blur is a STATE, not a per-frame value: a filter rewritten on every scroll
+   frame re-rasterises a screen-sized layer each time. Opacity and scale (cheap,
+   composited) carry the continuous part; the blur eases in once a chapter has
+   mostly left the screen. */
+.ch.out .ch-in{filter:blur(4px)}
+@media(max-width:760px){ .ch.out .ch-in{filter:blur(2.5px)} }
+@media(max-width:760px){ .ch{padding:8vh var(--gx)} }
+
+/* ---- the right-edge chapter pager ---- */
+.dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:35;display:flex;flex-direction:column;gap:10px}
+.dots a{position:relative;display:block;width:12px;height:12px;border:2px solid var(--ink);background:var(--paper2);
+  transition:transform var(--t-ui) var(--ease-spring),background-color var(--t-ui),height var(--t-ui) var(--ease-out)}
+.dots a.on{background:var(--ink);height:28px}
+.dots a:hover{transform:scale(1.2)}
+.dots a span{position:absolute;right:22px;top:50%;transform:translate(6px,-50%);white-space:nowrap;pointer-events:none;
+  font:800 11px/1 'Hanken Grotesk';letter-spacing:.6px;text-transform:uppercase;background:var(--ink);color:var(--paper);
+  padding:5px 8px;opacity:0;transition:opacity var(--t-ui),transform var(--t-ui) var(--ease-out)}
+.dots a:hover span,.dots a:focus-visible span{opacity:1;transform:translate(0,-50%)}
+@media(max-width:1100px){ .dots{display:none} }
+
+/* ================= HERO ================= */
+.hero{padding:0;overflow:hidden;justify-content:flex-start}
+.hero .ch-in{max-width:none;flex:1;display:flex;flex-direction:column;position:relative}
+.hero-copy{position:relative;z-index:3;text-align:center;padding:5.5vh 20px 0;display:flex;flex-direction:column;align-items:center}
+
+/* poster headline: three plates. Each line carries a ghost of itself printed in
+   the OTHER ink, misregistered; it starts far off and slides into register as
+   the page loads (--reg 1 -> 0), then drifts with the pointer (--mx/--my). */
+@property --reg{syntax:'<number>';inherits:true;initial-value:0}
+.poster{--reg:0;--mx:0;--my:0}
+.poster.intro{animation:register 1.1s var(--ease-out) .15s both}
+@keyframes register{from{--reg:1}to{--reg:0}}
+.poster .line{position:relative;display:block;font-weight:900;text-transform:uppercase;letter-spacing:-2px;line-height:.92;
+  font-size:clamp(34px,7.2vw,86px)}
+.poster .line::before{content:attr(data-t);position:absolute;inset:0;z-index:-1;mix-blend-mode:multiply;opacity:.5;pointer-events:none;
+  transform:translate(calc(var(--mx) * 5px + var(--reg) * var(--rx, -26px)),calc(var(--my) * 3.5px + var(--reg) * 12px))}
+.poster .l1{color:var(--blue)}
+.poster .l1::before{color:var(--pink);--rx:-30px}
+.poster .l3{color:var(--pink)}
+.poster .l3::before{color:var(--blue);--rx:30px}
+/* the middle line is a slab: its ghost is a pink slab behind it */
+.poster .l2{margin:.04em 0}
+.poster .l2::before{content:none}
+.poster .l2 span{position:relative;display:inline-block;background:var(--ink);color:var(--paper);padding:0 14px;transform:rotate(-1.5deg);
+  box-shadow:calc(7px + var(--mx) * 4px + var(--reg) * 34px) calc(6px + var(--my) * 3px) 0 rgba(255,61,127,.88)}
+.poster.intro .l2 span{animation:slab .7s var(--ease-out) .35s backwards}
+@keyframes slab{from{clip-path:inset(-10% 100% -10% -10%)}to{clip-path:inset(-10% -10% -10% -10%)}}
+
+.subzone{width:clamp(320px,calc(100vw - 640px),560px);margin:clamp(18px,4.5vh,48px) auto 0}
+.hero-copy .sub{font-weight:600;font-size:clamp(15px,1.55vw,18.5px);color:#454545;line-height:1.55}
+.hero-copy .sub b{font-weight:800}
+.hero-copy .sub + .sub{margin-top:12px}
+.hero-copy .sub mark{display:inline-block;padding:0 8px;font-weight:800;color:var(--paper)}
+.hero-copy .sub mark.b{background:var(--blue);transform:rotate(-1.2deg)}
+.hero-copy .sub mark.p{background:var(--pink);transform:rotate(1deg)}
+.hero-copy .sub mark.g{background:var(--green);transform:rotate(-.8deg)}
+.hero-copy .sub mark.v{background:var(--purple);transform:rotate(1.2deg)}
+.hero-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:clamp(18px,3.5vh,30px)}
+.hero-cta a{--sh:4px;display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:14.5px;text-decoration:none;
+  color:var(--ink);background:var(--paper2);border:2px solid var(--ink);padding:10px 18px;
+  transition:transform var(--t-press),translate .3s var(--ease-out)}
+.hero-cta a i{font-size:13px;transition:transform var(--t-ui) var(--ease-spring)}
+.hero-cta a:hover i{transform:rotate(-12deg) scale(1.15)}
+/* an off-site button's external arrow keeps its angle and darts the way it points */
+.hero-cta a .arw.up{margin-left:-4px}
+.hero-cta a:hover .arw.up{transform:rotate(-45deg) translateX(2px)}
+.hero-cta a.primary{background:var(--ink);color:var(--paper);--shc:var(--pink)}
+
+/* ---- live-now strip: one running match at a time (assets/js/live-banner.js).
+   A five-cell grid, spanning exactly the three hero buttons above it:
+
+       ┌──────┬───────────────────────┬───┐
+       │      │       A  vs  B        │   │
+       │ LIVE ├───────────┬───────────┤ → │
+       │      │ challenge │   time    │   │
+       └──────┴───────────┴───────────┴───┘
+
+   LIVE and the arrow each span both rows; the middle carries the matchup over a
+   shared metadata row. No empty state on purpose: no live match, no element.
+   Width is set in JS, from the buttons' own left-to-right span. */
+#liveNow{max-width:100%}
+#liveNow:not(:empty){margin-top:14px}
+.live-now{--ln-end:78px;--ln-shadow:var(--pink);
+  position:relative;overflow:hidden;display:block;
+  width:100%;text-decoration:none;color:var(--ink);
+  background:var(--paper2);border:2px solid var(--ink);
+  box-shadow:4px 4px 0 var(--ln-shadow);
+  font-size:13px;animation:lnIn .5s ease both}
+.live-now.rolling{transition:box-shadow 460ms linear}
+.ln-slide{--ln-accent:var(--pink);display:grid;
+  grid-template-columns:var(--ln-end) minmax(0,1.2fr) minmax(0,1fr) var(--ln-end);
+  grid-template-rows:1fr 1fr;background:var(--paper2)}
+.live-now:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ln-shadow)}
+@keyframes lnIn{from{opacity:0;transform:translateY(6px)}}
+/* rotation — a departure-board roll. SLIDE_MS in live-banner.js must match. */
+.ln-slide{transition:transform 460ms cubic-bezier(.4,0,.2,1)}
+.ln-slide.enter{position:absolute;inset:0;transform:translateY(100%)}
+.ln-slide.enter.settle{transform:translateY(0)}
+.ln-slide.leave{transform:translateY(-100%)}
+.ln-live,.ln-go{background:var(--ln-accent);color:var(--paper);padding:6px 8px;white-space:nowrap}
+.ln-live{grid-area:1/1/3/2;border-right:2px solid var(--ink);font:800 11px/1 'JetBrains Mono',monospace}
+.ln-live i{font-size:6px;animation:livepulse 1.4s ease-in-out infinite}
+@keyframes livepulse{50%{opacity:.45}}
+.ln-go{grid-area:1/4/3/5;border-left:2px solid var(--ink);font-size:13px}
+.ln-who{grid-area:1/2/2/4;flex-wrap:wrap;gap:7px;padding:8px 10px;font-weight:800;font-size:14px}
+.ln-who b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ln-vs{flex:none;font:600 11px/1 'JetBrains Mono',monospace;color:var(--mut);text-transform:uppercase;white-space:nowrap}
+.ln-chal,.ln-clock{border-top:2px solid var(--ink);padding:6px 8px;
+  font:600 11px/1 'JetBrains Mono',monospace;color:var(--mut);min-width:0}
+.ln-chal{grid-area:2/2/3/3}
+.ln-chal span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ln-clock{grid-area:2/3/3/4;white-space:nowrap}
+.ln-clock i{font-size:10px}
+.ln-slide > *{display:flex;align-items:center;justify-content:center;gap:5px;text-align:center;min-width:0}
+
+/* ---- the two sparring robots ----
+   They belong to the hero and nowhere else: bottom-anchored inside it, behind
+   the copy, as large as the screen allows. Layers, outside in:
+     .robo    position + the one-off swing-in (Web Animations)
+     .lean    leans toward the pointer (--mx), always on
+     .fighter punches (click / Enter / the occasional unprompted jab)
+     .bob     the idle sway */
+.robo{position:absolute;bottom:-2px;z-index:1;
+  --rw:clamp(200px,min(31vw,calc((100svh - var(--nav-h)) * .56)),540px);
+  width:var(--rw);aspect-ratio:340/360;pointer-events:none}
+.robo.blue{left:calc(var(--rw) * -0.1)}
+.robo.pink{right:calc(var(--rw) * -0.1)}
+.robo .lean{--mx:0;position:absolute;inset:0;transform-origin:50% 100%;
+  transform:translateX(calc(var(--mx) * 14px)) rotate(calc(var(--mx) * 2.4deg))}
+.robo .fighter{position:absolute;inset:0;pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  will-change:transform;transform-origin:50% 100%}
+.robo .fighter:focus-visible{outline:3px dashed var(--ink);outline-offset:6px}
+.robo .bob{position:absolute;inset:0}
+.robo .bob img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom center;
+  opacity:0;pointer-events:none;transform-origin:bottom center;filter:drop-shadow(6px 8px 0 rgba(26,26,26,.14))}
+.robo .bob img.on{opacity:1}
+/* a printed floor line the two of them stand on */
+.hero .floor{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--ink);z-index:2}
+
+.scrollcue{position:absolute;left:50%;bottom:22px;z-index:3;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:#7a7468;
+  font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;
+  transition:opacity .35s,visibility .35s}
+.scrollcue i{display:block;width:14px;height:14px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:rotate(45deg);animation:cue 1.6s var(--ease-out) infinite}
+@keyframes cue{0%,100%{translate:0 -3px;opacity:.5}50%{translate:0 3px;opacity:1}}
+.scrollcue.hide{opacity:0;visibility:hidden}
+/* a short screen has no room under the buttons for it */
+@media(max-height:780px){ .scrollcue{display:none} }
+
+/* ================= chapter titles ================= */
+.secth{margin:0 0 22px}
+.secth h2{font-weight:900;font-size:clamp(25px,3.5vw,40px);letter-spacing:-1px;line-height:1.14;text-transform:uppercase;max-width:920px}
+.secth mark{color:var(--paper);padding:0 10px;display:inline-block;transform:rotate(-1deg);
+  transition:transform .6s var(--ease-spring)}
+/* each colour leans its own way — hand-set inclines — a little further while
+   its chapter is out of focus, settling as it arrives */
+.secth mark.b{background:var(--blue);transform:rotate(-1.7deg)}
+.secth mark.p{background:var(--pink);transform:rotate(1.3deg)}
+.secth mark.v{background:var(--purple);transform:rotate(.9deg)}
+.secth mark.g{background:var(--green);transform:rotate(2.1deg)}
+.ch.out .secth mark.b,.ch.out .secth mark.g{transform:rotate(-4.5deg)}
+.ch.out .secth mark.p,.ch.out .secth mark.v{transform:rotate(4.2deg)}
+.secth .lede{margin-top:14px;font-weight:500;font-size:16px;line-height:1.5;color:#4a4a4a;max-width:640px}
+.subh{font-weight:900;font-size:clamp(17px,1.9vw,22px);letter-spacing:-.4px;line-height:1.2;text-transform:uppercase;margin:34px 0 0;max-width:760px}
+.subh em{font-style:normal;color:var(--blue)}
+.subh em.g{color:var(--green)}
+
+/* ================= the arena: replay + topology ================= */
+.match{border:2px solid var(--ink);background:var(--paper2);--sh:8px;
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);grid-template-areas:"topo side" "tl tl"}
+.match .arena{grid-area:topo;border-right:2px solid var(--ink);padding:10px 8px 4px;display:flex;align-items:center}
+.topo{width:100%;height:auto;display:block;margin:0 auto}
+.topo text{font-family:'Hanken Grotesk',sans-serif}
+.topo .mono{font-family:'JetBrains Mono',monospace}
+.topo .flash{animation:vbflash .95s ease}
+@keyframes vbflash{0%{opacity:0}22%{opacity:.5}100%{opacity:0}}
+.mside{grid-area:side;display:flex;flex-direction:column;min-width:0}
+.board{display:grid;grid-template-columns:1fr 64px 1fr;border-bottom:2px solid var(--ink)}
+.side{padding:10px 14px}
+.side.t2{text-align:right}
+.side .nm{font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:-.2px}
+.side.t1 .nm{color:var(--blue)} .side.t2 .nm{color:var(--pink)}
+.side .pts{font-size:44px;font-weight:900;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums;display:inline-block}
+.side .pts.bump{animation:bump .45s var(--ease-spring)}
+@keyframes bump{40%{transform:scale(1.3) rotate(-4deg)}}
+.mid{display:grid;place-items:center;background:var(--ink);color:var(--paper);font-weight:900;font-size:14px;letter-spacing:1px;text-align:center}
+.mid .rd{font-size:9px;font-weight:800;letter-spacing:1.5px;opacity:.7;display:block;margin-top:3px}
+/* the commentary is a short log: newest line on top, older ones fade down */
+.comm{flex:1;padding:10px 14px 8px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.45;
+  display:flex;flex-direction:column;gap:7px;overflow:hidden;min-height:150px;position:relative}
+.comm::after{content:"";position:absolute;left:0;right:0;bottom:0;height:42px;background:linear-gradient(transparent,var(--paper2));pointer-events:none}
+.comm p{display:grid;grid-template-columns:40px 1fr;gap:8px;animation:logIn .45s var(--ease-out) both}
+.comm p:nth-child(2){opacity:.62} .comm p:nth-child(3){opacity:.4} .comm p:nth-child(n+4){opacity:.22}
+.comm p time{color:#9a9282;font-weight:600}
+.comm b.b1{color:var(--blue)} .comm b.b2{color:var(--pink)} .comm b.g{color:var(--green)}
+@keyframes logIn{from{opacity:0;transform:translateY(-8px)}}
+.tl{grid-area:tl;position:relative;height:104px;margin:0;border-top:2px solid var(--ink);padding:0 18px}
+.tl .track{position:absolute;left:18px;right:18px;top:0;bottom:0}
+.tl .rail{position:absolute;left:0;right:0;top:52px;height:4px;background:var(--ink)}
+.tl .round{position:absolute;top:18px;bottom:6px;border-left:2px dashed #c3b9a3}
+.tl .round span{position:absolute;bottom:2px;left:5px;font-weight:900;font-size:9px;letter-spacing:1.5px;color:#a59a84;white-space:nowrap}
+.tl .head{position:absolute;top:38px;width:4px;height:32px;background:var(--ink);left:0}
+.tl .head::after{content:"";position:absolute;top:-5px;left:-6px;border:8px solid transparent;border-top-color:var(--ink)}
+.tl .head::before{content:"";position:absolute;bottom:-5px;left:-6px;border:8px solid transparent;border-bottom-color:var(--ink)}
+.tl .clock{position:absolute;right:18px;top:8px;font:600 11px/1 'JetBrains Mono',monospace;color:#8a857c}
+.ev{position:absolute;transform:translateX(-50%) scale(0);transition:transform .3s var(--ease-spring)}
+.ev.on{transform:translateX(-50%) scale(1)}
+.ev.steal{top:8px;border:2px solid var(--ink);font-weight:900;font-size:9.5px;padding:2px 7px;background:var(--blue);color:#fff;box-shadow:2px 2px 0 var(--ink);white-space:nowrap;rotate:-4deg}
+.ev.steal.t2{background:var(--pink)}
+.ev.steal.r2{top:26px;rotate:3deg}
+.ev.patch{top:68px;border:2px solid var(--green);color:var(--green);background:var(--paper);font-weight:800;font-size:9px;padding:1px 7px;border-radius:20px;white-space:nowrap}
+.ev.rot{top:62px;color:var(--purple);font-weight:800;font-size:9px;white-space:nowrap}
+
+/* ================= the round: loop + scoring ================= */
+.loop{position:relative;display:grid;grid-template-columns:repeat(5,1fr);border:2px solid var(--ink);background:var(--paper2);--sh:8px}
+.beat{position:relative;padding:16px 14px 18px;border-right:2px solid var(--ink);
+  transition:background-color .35s var(--ease-out),color .35s}
+.beat:last-child{border-right:0}
+.beat .no{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px;color:#8a857c}
+.beat h4{font-weight:900;font-size:15px;text-transform:uppercase;margin:6px 0 6px;letter-spacing:-.2px;transition:color .35s}
+.beat.a h4{color:var(--pink)} .beat.d h4{color:var(--green)} .beat.r h4{color:var(--purple)} .beat.s h4{color:var(--blue)}
+.beat p{font-size:12.5px;line-height:1.45;color:#4a4a4a;transition:color .35s}
+/* the beat the round clock is on wears ink */
+.loop .beat.now{background:var(--ink)}
+.loop .beat.now p{color:#d9d3c6} .loop .beat.now .no{color:#a59a84}
+.loop .beat.now:not(.a):not(.d):not(.r):not(.s) h4{color:var(--paper)}
+.loop .beat.now.s h4{color:#8fa0ff}
+/* the round clock: a bar that sweeps the five beats */
+.loop .clockbar{position:absolute;left:0;bottom:-3px;height:6px;width:calc(var(--p, 0) * 100%);background:var(--pink);z-index:2}
+.score{width:100%;border-collapse:collapse;border:2px solid var(--ink);margin-top:14px;background:var(--paper2);--sh:8px}
+.score th,.score td{border:2px solid var(--ink);padding:9px 14px;text-align:left;font-size:14px}
+.score th{font-weight:900;text-transform:uppercase;font-size:11px;letter-spacing:1.5px;background:var(--ink);color:var(--paper)}
+.score td b{font-weight:800}
+.score tr:not(:first-child){transition:background-color .2s}
+.score tr:not(:first-child):hover{background:#f1ebde}
+.score .pt{font-family:'JetBrains Mono',monospace;font-weight:600;white-space:nowrap}
+.score .pt.b{color:var(--blue)} .score .pt.g{color:var(--green)}
+
+/* ================= on the record (three plates) ================= */
+.info{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{border:2px solid var(--ink);background:var(--paper2);padding:20px;--sh:6px}
+.card .ic{display:inline-flex;align-items:center;gap:7px;font-weight:900;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#fff;background:var(--ink);padding:4px 9px}
+.card.b{--shc:var(--blue)} .card.p{--shc:var(--pink)} .card.g{--shc:var(--green)}
+.card.b .ic{background:var(--blue)} .card.p .ic{background:var(--pink)} .card.g .ic{background:var(--green)}
+.card h4{font-weight:900;font-size:18px;margin:12px 0 8px;letter-spacing:-.3px}
+.card p{font-size:14px;line-height:1.55;color:#4a4a4a}
+.card p b{font-weight:800}
+
+/* ================= challenges ================= */
+.forge{border:2px solid var(--ink);background:var(--paper2);--sh:8px}
+.forge-row{display:grid;grid-template-columns:repeat(3,1fr)}
+.forge-tray{border-top:2px solid var(--ink);padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gchip,.tchip{border:2px solid var(--ink);padding:4px 12px;box-shadow:2px 2px 0 var(--ink);text-decoration:none;
+  transition:transform var(--t-press),box-shadow var(--t-press),rotate .3s var(--ease-spring)}
+.gchip{font-weight:800;font-size:12.5px;background:var(--ink);color:var(--paper)}
+.tchip{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;background:var(--paper);color:var(--ink)}
+.gchip:hover{rotate:-2deg;box-shadow:3px 3px 0 var(--pink)}
+.gchip:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+
+/* ================= institutions: the belt is assets/css/belt.css ================= */
+.ch.last{justify-content:space-between;padding-bottom:0}
+.ch.last .ch-in:first-child{margin-top:auto;margin-bottom:auto}
+/* the footer bar spans the whole width, out through the chapter's own gutter */
+.ch.last .footer{margin:56px calc(-1 * var(--gx)) 0}
+
+/* ================= narrow ================= */
+@media(max-width:900px){
+  .match{grid-template-columns:1fr;grid-template-areas:"side" "topo" "tl"}
+  .match .arena{border-right:0;border-top:2px solid var(--ink)}
+  .comm{min-height:118px}
+  .loop{grid-template-columns:1fr}
+  .beat{border-right:0;border-bottom:2px solid var(--ink);display:grid;grid-template-columns:34px 1fr;column-gap:8px}
+  .beat .no{grid-row:1/3;padding-top:3px}
+  .beat h4{margin-top:0}
+  .beat:last-child{border-bottom:0}
+  .loop .clockbar{display:none}
+  .forge-row{grid-template-columns:1fr}
+  .forge-row .beat:last-child{border-bottom:0}
+  .info{grid-template-columns:1fr;gap:16px}
+}
+@media(max-width:640px){
+  .hero-copy{padding:4vh 8px 0}
+  .poster .line{font-size:clamp(26px,8.3vw,48px);letter-spacing:-1px}
+  .subzone{width:min(440px,calc(100vw - 24px))}
+  .hero-copy .sub{padding:0 6px}
+  .hero{min-height:100svh}
+  .hero .ch-in{padding-bottom:calc(var(--rw) * .82)}
+  .robo{--rw:min(46vw,230px)}
+  .robo.blue{left:-6vw} .robo.pink{right:-6vw}
+  /* the robots are decoration down here: they must never eat a tap meant for a button */
+  .robo .fighter{pointer-events:none}
+  .ln-go{display:none}
+  .ln-slide{grid-template-columns:var(--ln-end) minmax(0,1.2fr) minmax(0,1fr) 0}
+  .side .pts{font-size:34px}
+  .score th,.score td{padding:8px 9px;font-size:12.5px}
+  .tl{height:96px}
+}
+
+/* ---- reduced motion: no swing-in, no sway/punch, no belt, no depth of field ---- */
+@media(prefers-reduced-motion:reduce){
+  .poster .line::before{transform:translate(4px,3px)}
+  .poster .l2 span{box-shadow:7px 6px 0 rgba(255,61,127,.88)}
+  .scrollcue i{animation:none}
+}

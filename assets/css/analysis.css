@@ -1,0 +1,145 @@
+/* mc-v1 analysis — the figures drawn from a montecarlo campaign's live stats
+   (GET /api/campaigns/{id}/stats), which the leaderboard mounts under the
+   standings of a campaign that publishes them.
+   Rendered by assets/js/mc-analysis.js. */
+
+/* --r-att/--r-def: the radar's attack and defense pair — the paper's red fill and teal dashed line */
+.mca{--att:var(--blue);--def:var(--green);--svc:var(--purple);--r-att:var(--pink);--r-def:var(--green);margin-top:10px}
+.mca svg{display:block;overflow:visible;font-family:'Hanken Grotesk',sans-serif}
+/* a default only: a text's own fill attribute must win, so never a plain `text` rule */
+.mca svg text:not([fill]){fill:var(--ink)}
+.mca .mono,.mca svg .mono{font-family:'JetBrains Mono',monospace}
+.mca .ax line,.mca .ax path{stroke:#cfc6b4;stroke-width:1;shape-rendering:crispEdges}
+.mca .ax .base{stroke:var(--ink);stroke-width:2}
+.mca .ax text{fill:#7a7468;font:600 10.5px 'JetBrains Mono',monospace}
+.mca .ax text.lab{font:700 10.5px 'Hanken Grotesk';letter-spacing:.8px;text-transform:uppercase;fill:#7a7468}
+
+/* ---- the chapter heading that opens the analysis on the leaderboard ---- */
+.mca-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;
+  margin:80px 0 0}
+.mca-head h2{font-weight:900;font-size:clamp(26px,3.6vw,40px);letter-spacing:-1px;line-height:1.05;text-transform:uppercase}
+.mca-head h2 mark{background:var(--ink);color:var(--paper);padding:0 10px;display:inline-block;transform:rotate(-1.2deg);
+  box-shadow:5px 4px 0 var(--pink)}
+.mca-head p{max-width:560px;margin-top:10px;font-weight:500;font-size:15px;line-height:1.5;color:#4a4a4a}
+.mca-fresh,.mca-head p.mca-fresh{font:600 11px/1.4 'JetBrains Mono',monospace;color:#7a7468;margin-top:6px}
+.mca-fresh b{color:var(--ink)}
+.mca-fresh .stale{color:#c2740f;font-weight:700}
+
+/* ---- stat tiles: the campaign's progress in five numbers ---- */
+.mca-tiles{display:grid;grid-template-columns:repeat(5,1fr);border:2px solid var(--ink);background:var(--paper2);margin-top:22px;--sh:6px}
+.mca-tiles > div{padding:14px 16px 12px;border-right:2px solid var(--line);min-width:0}
+.mca-tiles > div:last-child{border-right:0}
+.mca-tiles b{display:block;font-size:32px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.mca-tiles b small{font-size:15px;font-weight:700;color:#8a857c;letter-spacing:0}
+.mca-tiles span{display:block;margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a7468}
+.mca-tiles .meter{height:5px;background:#e8e1d2;margin-top:9px;position:relative;overflow:hidden}
+.mca-tiles .meter i{position:absolute;left:0;top:0;bottom:0;background:var(--ink);width:0;transition:width 1.1s var(--ease-out)}
+.mca-tiles .meter i.p{background:var(--pink)}
+
+/* ---- the entrant rail: hover or tap an entrant to follow it through every figure ---- */
+.mca-rail{position:sticky;top:var(--nav-h);z-index:20;margin:22px 0 0;padding:8px 0;display:flex;align-items:center;gap:12px;
+  background:var(--paper);border-bottom:2px solid var(--line)}
+.mca-rail .hint{flex:none;font:800 10.5px/1.2 'Hanken Grotesk';letter-spacing:1px;text-transform:uppercase;color:#7a7468}
+/* one row that scrolls sideways, so the rail stays a slim strip over the figures */
+.mca-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0;
+  mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.mca-chips::-webkit-scrollbar{display:none}
+.mca-chip{flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;font:600 12px/1 'JetBrains Mono',monospace;color:var(--ink);
+  background:var(--paper2);border:2px solid var(--ink);padding:5px 9px 5px 6px;cursor:pointer;
+  transition:background-color var(--t-ui),color var(--t-ui),transform var(--t-press),opacity var(--t-ui)}
+.mca-chip .duo{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.mca-chip .rk{font:800 10px/1 'Hanken Grotesk';color:#8a857c}
+.mca-chip:hover{background:#f1ebde}
+.mca-chip:active{transform:scale(.96)}
+.mca-chip.pin{background:var(--ink);color:var(--paper)}
+.mca-chip.pin .rk{color:#bdb5a6}
+.mca.focusing .mca-chip:not(.on){opacity:.45}
+
+/* ---- a figure: title, one-line reading, the chart, the numbers on demand ---- */
+.fig{border:2px solid var(--ink);background:var(--paper2);margin-top:28px;--sh:7px;min-width:0}
+.fig > header{padding:16px 20px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.fig h3{font-weight:900;font-size:19px;letter-spacing:-.3px;line-height:1.2}
+.fig h3 .no{display:inline-block;font:700 11px/1 'JetBrains Mono',monospace;color:var(--paper);background:var(--ink);
+  padding:4px 6px;margin-right:10px;vertical-align:3px}
+.fig header p{font-size:13.5px;line-height:1.5;color:#5d564c;margin-top:5px;max-width:720px}
+.fig .body{padding:10px 20px 14px;position:relative}
+.fig .duo2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.fig .duo2 > div{min-width:0}
+.fig .panel-t{font:800 11px/1 'Hanken Grotesk';letter-spacing:1px;text-transform:uppercase;color:#7a7468;margin:4px 0 8px}
+.fig details{border-top:2px solid var(--line);padding:0 20px}
+.fig summary{cursor:pointer;font:700 11.5px/1 'Hanken Grotesk';color:#7a7468;padding:11px 0;list-style:none;display:flex;align-items:center;gap:8px}
+.fig summary::-webkit-details-marker{display:none}
+.fig summary::before{content:"";width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-left:6px solid currentColor;transition:transform var(--t-ui) var(--ease-out)}
+.fig details[open] summary::before{transform:rotate(90deg)}
+.fig summary:hover{color:var(--ink)}
+.fig .tbl{overflow-x:auto;padding-bottom:14px}
+.fig table{border-collapse:collapse;font-size:12px;width:100%}
+.fig th,.fig td{padding:5px 9px;border-bottom:2px solid var(--line);text-align:right;white-space:nowrap}
+.fig th:first-child,.fig td:first-child{text-align:left}
+.fig th{font:800 10px/1.2 'Hanken Grotesk';letter-spacing:.8px;text-transform:uppercase;color:#7a7468;border-bottom:2px solid var(--ink)}
+.fig td{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+
+/* legend: line keys for lines, swatches for areas */
+.lgd{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;font-weight:600;color:#4a4a4a;margin:2px 0 8px}
+.lgd span{display:inline-flex;align-items:center;gap:7px}
+.lgd i{display:inline-block;width:18px;height:0;border-top:2px solid currentColor}
+.lgd i.dash{border-top-style:dashed}
+.lgd i.sw{width:12px;height:12px;border:0}
+.lgd i.box{width:12px;height:12px;border:2px solid var(--ink)}
+
+/* segmented control (round picker on the facets) */
+.seg{display:inline-flex;border:2px solid var(--ink);background:var(--paper2)}
+.seg button{font:700 12px/1 'Hanken Grotesk';background:none;border:0;padding:6px 11px;cursor:pointer;color:var(--ink);
+  transition:background-color var(--t-ui),color var(--t-ui)}
+.seg button + button{border-left:2px solid var(--ink)}
+.seg button.on{background:var(--ink);color:var(--paper)}
+
+/* ---- marks ---- */
+.mca [data-e]{transition:opacity .2s var(--ease-out)}
+.mca .hit{fill:transparent;cursor:pointer}
+.mca .row-hl{fill:var(--ink);opacity:0;transition:opacity .2s}
+.mca .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.mca .xh{stroke:var(--ink);stroke-width:1;opacity:0;pointer-events:none}
+.mca .pilot{fill:#efe8da}
+.mca .cell text{font:600 10px 'JetBrains Mono',monospace;pointer-events:none}
+
+/* ---- the tooltip: values lead, names follow ---- */
+.mca-tip{position:fixed;z-index:90;pointer-events:none;min-width:150px;max-width:300px;background:var(--paper2);
+  border:2px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:8px 10px;font-size:12px;
+  opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s var(--ease-out)}
+.mca-tip.on{opacity:1;transform:none}
+.mca-tip h5{font:800 10.5px/1.2 'Hanken Grotesk';letter-spacing:.8px;text-transform:uppercase;color:#7a7468;margin-bottom:5px}
+.mca-tip .r{display:grid;grid-template-columns:14px auto 1fr;gap:7px;align-items:center;line-height:1.6}
+.mca-tip .r i{display:block;width:14px;border-top:2px solid}
+.mca-tip .r b{font:700 12px 'JetBrains Mono',monospace;text-align:right}
+.mca-tip .r span{color:#5d564c;font-family:'JetBrains Mono',monospace;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mca-tip .r.me span{color:var(--ink);font-weight:700}
+.mca-tip p{color:#4a4a4a;line-height:1.45}
+.mca-tip p b{font-family:'JetBrains Mono',monospace}
+
+/* radar small multiples */
+.radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 10px}
+.radar{text-align:center;padding:6px 2px 4px;border:2px solid transparent;transition:border-color .2s,opacity .2s}
+.radar:hover{border-color:var(--ink)}
+.radar .rt{font:700 11px/1.2 'JetBrains Mono',monospace;display:flex;justify-content:center;align-items:center;gap:6px;white-space:nowrap}
+.radar .rt .duo{flex:none;width:10px;height:10px;border-radius:50%;border:2px solid var(--ink)}
+.axkey{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;padding-top:10px;border-top:2px solid var(--line);font-size:12px;color:#4a4a4a}
+.axkey b{font-family:'JetBrains Mono',monospace;background:var(--ink);color:var(--paper);padding:1px 5px;margin-right:6px}
+
+.mca-empty{margin-top:22px;padding:14px 16px;border:2px dashed #bcb4a4;color:#7a7468;font-weight:600;font-size:14px}
+.mca-loading{padding:26px 2px;color:#7a7468;font-weight:600;font-size:13px}
+
+@media(max-width:860px){
+  .mca-tiles{grid-template-columns:repeat(2,1fr)}
+  .mca-tiles > div{border-bottom:2px solid var(--line)}
+  .mca-tiles > div:nth-child(2n){border-right:0}
+  .mca-tiles > div:last-child{grid-column:1/-1;border-bottom:0}
+  .fig .duo2{grid-template-columns:1fr}
+  .fig > header,.fig .body{padding-left:14px;padding-right:14px}
+  .fig details{padding:0 14px}
+}
+@media(max-width:560px){
+  .radars{grid-template-columns:repeat(2,1fr)}
+  .mca-chip{font-size:11px;padding:4px 7px 4px 5px}
+}

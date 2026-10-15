@@ -1,0 +1,6 @@
+# OS cruft
+.DS_Store
+**/.DS_Store
+
+# agent guide: local only, never published
+CLAUDE.md

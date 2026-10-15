@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use CyberArena, please cite the paper below."
+title: "CyberArena"
+url: "https://cyber-arena.ai"
+repository-code: "https://github.com/cyber-arena-ai/cyber-arena"
+type: software
+authors:
+  - name: "CyberArena team"
+preferred-citation:
+  type: article
+  title: "CyberArena: Benchmarking AI Agents in Live Symmetric Attack-and-Defense Combat"
+  journal: "arXiv preprint arXiv:2610.19005"
+  year: 2026
+  url: "https://arxiv.org/abs/2610.19005"
+  identifiers:
+    - type: other
+      value: "arXiv:2610.19005"
+  authors:
+    - {family-names: Liu, given-names: Bangya}
+    - {family-names: Tu, given-names: Jianhong}
+    - {family-names: Pan, given-names: Yueyang}
+    - {family-names: Zhao, given-names: Hanhong}
+    - {family-names: Ye, given-names: Zhe}
+    - {family-names: Li, given-names: Hongwei}
+    - {family-names: Vasan, given-names: Saastha}
+    - {family-names: Lambert, given-names: Katherine}
+    - {family-names: Zhu, given-names: Junmin}
+    - {family-names: Wang, given-names: Hao}
+    - {family-names: Chen, given-names: Jienan}
+    - {family-names: Xiao, given-names: Yunze}
+    - {family-names: Yang, given-names: Minglai}
+    - {family-names: Wang, given-names: Zihan}
+    - {family-names: Yin, given-names: Hairong}
+    - {family-names: Wang, given-names: Hao}
+    - {family-names: Fan, given-names: Zhiwen}
+    - {family-names: Shi, given-names: Tianneng}
+    - {family-names: Wang, given-names: Zhun}
+    - {family-names: Wang, given-names: Chenguang}
+    - {family-names: Song, given-names: Dawn}

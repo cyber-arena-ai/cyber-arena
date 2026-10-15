@@ -1,0 +1,381 @@
+// CyberArena — shared helpers
+import { api } from './config.js';
+
+export { api, API_BASE, ARCHIVE_RUNS } from './config.js';
+
+export async function loadJSON(path, init){
+  const res = await fetch(path, init);
+  if(!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+  return res.json();
+}
+
+// Normalized key for loose name matching: the backend and the table spell
+// harnesses differently ("claude", "Claude Code", "claude-code").
+const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+// Load the harness color table and return a combo-aware resolver.
+//
+// The competitive entity is a <model × harness> pair — the same model can run
+// under different harnesses in future seasons, so identity is never the model
+// alone. `get(x)` accepts a team/agent object ({model, harness?}) or a bare
+// model string (legacy). The harness half resolves in order:
+//   1. an explicit `harness` field on the entity (matched loosely against the
+//      table: id, fullName, cli binary name, declared aliases)
+//   2. the model -> harness binding in the table (today's data: 1:1)
+//   3. model-family prefix fallback
+//   4. a SYNTHESIZED identity — initials + a stable color hashed from the name
+//      out of the riso accent palette. The table is a curation layer, not a
+//      fixed pool: unknown harnesses still get a distinct, stable identity.
+// Always returns a usable object (color/shortName/fullName).
+export async function loadHarnesses(path = api('/api/harnesses')){
+  const table = await loadJSON(path);
+  const byModel = {}, byId = {}, byAlias = {};
+  /* ---- vendor colour system, entirely table-driven ------------------------
+     COLOUR IS CARRIED BY THE VENDOR, not the harness — `claude-opus-4-8` is
+     Anthropic blue whether it ran under Claude Code or opencode, or the same
+     model would change colour between rows and read as two competitors. The
+     vendor table, the neutral tone and the synth palette all come from
+     harnesses.json, so a new vendor is an edit THERE and none here. */
+  const VENDORS = table.vendors || {};
+  const NEUTRAL = table.neutral || {};
+  // harness (normalized) -> the vendor that builds it; '' for vendor-neutral
+  const H_VENDOR = {};
+  Object.entries(VENDORS).forEach(([v, d]) =>
+    (d.harnesses || []).forEach(h => { H_VENDOR[norm(h)] = v; }));
+  (NEUTRAL.harnesses || []).forEach(h => { H_VENDOR[norm(h)] = ''; });
+  // the vendor id for a model name, or '' when nothing matches. `models` are
+  // prefixes and the first vendor wins, so file order is priority.
+  const vendorOf = m => {
+    const s = String(m ?? '').toLowerCase().trim();
+    for(const [v, d] of Object.entries(VENDORS))
+      if((d.models || []).some(pre => s.startsWith(pre))) return v;
+    return '';
+  };
+  // the vendor id a harness belongs to: '' when vendor-neutral or unknown
+  const harnessVendorOf = h => {
+    const k = norm(h);
+    if(k in H_VENDOR) return H_VENDOR[k];
+    return vendorOf(h);   // e.g. a harness literally named "claude-code"
+  };
+  table.harnesses.forEach(h => {
+    byId[h.id] = h;
+    (h.models || []).forEach(m => { byModel[m] = h; });
+    // the backend names harnesses loosely ("claude", "codex"), so match wide
+    [h.id, h.fullName, String(h.cli || '').split(/\s/)[0], ...(h.aliases || [])]
+      .map(norm).filter(Boolean).forEach(a => { if(!byAlias[a]) byAlias[a] = h; });
+  });
+  // a model with no explicit harness and no table binding falls back to its
+  // own vendor's harness, when the table carries one
+  const byPrefix = m => {
+    const v = vendorOf(m);
+    if(!v) return null;
+    return (VENDORS[v].harnesses || []).map(a => byId[a]).find(Boolean) || null;
+  };
+  // synthesized identity for anything outside the table: initials + a color
+  // picked deterministically (name hash) from the riso accent palette, so a
+  // brand-new harness is stable and distinct without a table edit
+  const PALETTE = table.palette?.length ? table.palette : [table.fallback.color];
+  const hash = s => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const synth = name => {
+    const n = String(name ?? '?');
+    return { ...table.fallback, id: norm(n), shortName: initials(n), fullName: n,
+             color: PALETTE[hash(norm(n)) % PALETTE.length], synthetic: true };
+  };
+  const model = x => (x && typeof x === 'object') ? x.model : x;
+  /* ---- model family -------------------------------------------------------
+     The competitor LINE a model belongs to — what a reader wants on a result,
+     where the harness ("what drove it") and the vendor ("who built it") are
+     beside the point. Table-driven like everything else: `families` is an
+     ordered prefix list in harnesses.json and the first match wins, so nothing
+     about a competitor is spelled out here. */
+  const FAMILIES = table.families || [];
+  // A wire prefix is not part of a model's identity: openhands drives through
+  // LiteLLM, which needs `openai/` on the front to pick its wire, and that
+  // reaches us on the run row. Strip one leading `<word>/` before matching, so
+  // `openai/claude-opus-5` is the same competitor as `claude-opus-5`.
+  const bareModel = m => String(m ?? '').trim().replace(/^[a-z0-9_-]+\//i, '');
+  const familyOf = x => {
+    const m = bareModel(model(x)).toLowerCase();
+    if(!m) return null;
+    const hit = FAMILIES.find(f => m.startsWith(String(f.prefix || '').toLowerCase()));
+    // No table entry: fall back to the model itself rather than inventing a
+    // family — a wrong grouping reads as a claim about who the competitor is.
+    return { id: hit ? hit.label : m, label: hit ? hit.label : bareModel(model(x)) };
+  };
+  const get = x => {
+    // an explicit harness always wins — even unknown, it must not be rendered
+    // as the model's table binding (that's exactly the 1:1 assumption we drop)
+    if(x && typeof x === 'object' && x.harness) return byAlias[norm(x.harness)] || synth(x.harness);
+    const m = model(x);
+    return byModel[m] || byAlias[norm(m)] || byPrefix(m) || synth(m);
+  };
+  // dedupe/ranking key for an entity — model × harness, never model alone.
+  // An explicit-but-unknown harness still keys distinctly (synth carries its
+  // normalized name as the id).
+  const comboKey = x => {
+    const h = get(x);
+    return `${model(x) || '?'}@${h.id || norm(h.fullName)}`;
+  };
+  const comboLabel = x => `${model(x) || '?'} · ${get(x).shortName}`;
+  // The model half's colour is its VENDOR's — never the harness it happens to
+  // be running under, or the same model would change colour between rows.
+  // The harness table is only consulted for a model whose vendor we cannot
+  // name, so a curated entry still beats a hash.
+  const modelColor = x => {
+    const m = model(x);
+    const v = vendorOf(m);
+    if(v) return VENDORS[v].color;
+    return (byModel[m] || byPrefix(m) || synth(m)).color;
+  };
+  // A harness wears its own vendor's colour (claude-code is Anthropic blue) and
+  // graphite when it has none — a general harness must not compete with the
+  // vendor hue beside it.
+  const harnessColor = x => {
+    const h = get(x);
+    const v = harnessVendorOf((x && typeof x === 'object' && x.harness) || h.id || h.fullName);
+    if(v) return VENDORS[v].color;
+    return norm(h.id) in H_VENDOR ? NEUTRAL.color : h.color;
+  };
+  // Is the model running on a harness built by its own vendor?
+  const isNative = x => {
+    const v = vendorOf(model(x));
+    const h = get(x);
+    return !!v && v === harnessVendorOf((x && typeof x === 'object' && x.harness) || h.id || h.fullName);
+  };
+  // the <model × harness> combination is indicated as a HALF-HALF disc —
+  // model color on top, harness color below — never an invented third color.
+  // Collapses to a solid when the two halves agree (model bound to harness).
+  const duoCSS = x => {
+    const mc = modelColor(x), hc = harnessColor(x);
+    return mc === hc ? hc : `linear-gradient(180deg, ${mc} 0 50%, ${hc} 50% 100%)`;
+  };
+  // per-team ACCENT colors (--t1/--t2, text, borders — places that need one
+  // color): pick the component that actually differs between the two entrants
+  // — harness color when distinct, else model color, else a palette shift
+  // (true mirror match). Takes the raw entities, returns harness-identity
+  // objects with `color` set to the accent.
+  const distinctPair = (x1, x2) => {
+    // vendor first: it is the axis a reader is most likely to care about
+    const h1 = get(x1), h2 = get(x2);
+    const m1 = modelColor(x1), m2 = modelColor(x2);
+    if(m1 !== m2) return [{ ...h1, color: m1 }, { ...h2, color: m2 }];
+    const c1 = harnessColor(x1), c2 = harnessColor(x2);
+    if(c1 !== c2) return [{ ...h1, color: c1 }, { ...h2, color: c2 }];
+    return [h1, { ...h2, color: PALETTE.find(c => c !== h1.color) }];
+  };
+  return { get, comboKey, comboLabel, duoCSS, modelColor, harnessColor,
+           isNative, distinctPair, vendorOf, harnessVendorOf, familyOf, bareModel };
+}
+
+export const fmtTime = s => `${Math.floor(s/60)}:${String(Math.round(s)%60).padStart(2,'0')}`;
+
+// How long a match has been going, in seconds — the ONE answer to that
+// question, because `duration_s` is not it for a match still being played.
+//
+// `duration_s` is the time of the last SCOREBOARD event, so a running match
+// reads 0 until its first steal or patch lands and then lags by however long
+// it has since been quiet: 3:13 for a match that was 16:29 old. Elapsed for a
+// running match is now() - started_at, and it has to be recomputed to tick.
+// For a FINISHED match duration_s is the real wall duration and stays right.
+//
+// null means "we cannot say": a live run cached before `started_at` existed
+// and with no event yet. Callers print "just started", never a wrong number.
+export const runSeconds = r => {
+  if (r.outcome !== 'running') return r.duration_s ?? 0;
+  const t0 = Date.parse(r.started_at || '');
+  if (!isNaN(t0)) return Math.max(0, (Date.now() - t0) / 1000);
+  return r.duration_s > 0 ? r.duration_s : null;
+};
+export const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+export const initials = m => m.split(/[-\s]/)[0].slice(0,2).toUpperCase();
+
+// page buttons for a paged list (runs archive, games grid) — hidden when one
+// page; long ranges condense to 1 … n-1 n n+1 … last. `go(p)` re-renders.
+export function renderPager(el, page, pages, go){
+  if(pages <= 1){ el.innerHTML = ''; return; }
+  const want = new Set([1, pages, page - 1, page, page + 1]);
+  const nums = [];
+  let prev = 0;
+  for(let p = 1; p <= pages; p++){
+    if(!want.has(p)) continue;
+    if(p - prev > 1) nums.push(`<span class="gap">…</span>`);
+    nums.push(`<button data-p="${p}" class="${p === page ? 'on' : ''}">${p}</button>`);
+    prev = p;
+  }
+  el.innerHTML = `<button data-p="${page - 1}" ${page === 1 ? 'disabled' : ''} aria-label="Previous page">←</button>
+    ${nums.join('')}
+    <button data-p="${page + 1}" ${page === pages ? 'disabled' : ''} aria-label="Next page">→</button>`;
+  el.querySelectorAll('button[data-p]').forEach(b => b.onclick = () => go(+b.dataset.p));
+}
+
+// mark the current page's nav link
+export function setActiveNav(page){
+  document.querySelectorAll('.navlinks a').forEach(a=>{
+    if(a.getAttribute('href') === page) a.classList.add('active');
+  });
+}
+
+/* ---- dropdown ------------------------------------------------------------
+   A hand-built listbox, used wherever a page slices by campaign. Not a native
+   <select>: that control cannot take the riso treatment and read as part of the
+   page. The cost of dropping it is that everything it did for free has to be
+   done here — roving focus, type-ahead-free arrow navigation, Escape, click-
+   outside, and the ARIA that makes it announce as a listbox.
+
+   options: [{ value, label, count?, tag?, title?, current? }]
+   Returns { el, set(value), destroy() }. */
+export function dropdown(host, { label = '', options = [], value, onChange }) {
+  const opts = options.slice();
+  let open = false, active = Math.max(0, opts.findIndex(o => o.value === value));
+
+  const wrap = document.createElement('span');
+  wrap.className = 'cpick';
+  wrap.innerHTML =
+    (label ? `<span class="cplabel">${esc(label)}</span>` : '') +
+    `<span class="dd" data-open="false">
+       <button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false">
+         <span class="dd-cur"></span><b></b><i class="dd-car"></i>
+       </button>
+       <ul class="dd-menu" role="listbox" tabindex="-1"></ul>
+     </span>`;
+  const dd = wrap.querySelector('.dd');
+  const btn = wrap.querySelector('.dd-btn');
+  const menu = wrap.querySelector('.dd-menu');
+
+  const paintBtn = () => {
+    const o = opts.find(x => x.value === value) || opts[0] || {};
+    wrap.querySelector('.dd-cur').textContent = o.label ?? '';
+    wrap.querySelector('.dd-btn b').textContent = o.count ?? '';
+    btn.title = o.title || '';
+  };
+  const paintMenu = () => {
+    menu.innerHTML = opts.map((o, i) =>
+      `<li role="option" data-v="${esc(o.value)}" title="${esc(o.title || '')}"
+           aria-selected="${o.value === value}"
+           class="${o.value === value ? 'on' : ''}${i === active ? ' act' : ''}"
+         ><span>${esc(o.label)}${o.tag ? ` <span class="dd-tag">${esc(o.tag)}</span>` : ''}</span>`
+      + `<b>${o.count ?? ''}</b></li>`).join('');
+  };
+
+  const setOpen = (v) => {
+    open = v;
+    dd.dataset.open = String(v);
+    btn.setAttribute('aria-expanded', String(v));
+    if (v) { active = Math.max(0, opts.findIndex(o => o.value === value)); paintMenu(); }
+  };
+  const choose = (v) => {
+    if (v !== value) { value = v; paintBtn(); onChange?.(v); }
+    setOpen(false);
+    btn.focus();
+  };
+  const move = (d) => {
+    if (!opts.length) return;
+    active = (active + d + opts.length) % opts.length;
+    paintMenu();
+    menu.children[active]?.scrollIntoView({ block: 'nearest' });
+  };
+
+  btn.onclick = (e) => { e.stopPropagation(); setOpen(!open); };
+  menu.onclick = (e) => {
+    const li = e.target.closest('li');
+    if (li) { e.stopPropagation(); choose(li.dataset.v); }
+  };
+  // pointer highlight tracks the keyboard cursor, so the two never disagree
+  menu.onmousemove = (e) => {
+    const li = e.target.closest('li');
+    if (!li) return;
+    const i = [...menu.children].indexOf(li);
+    if (i !== active) { active = i; paintMenu(); }
+  };
+  wrap.onkeydown = (e) => {
+    const k = e.key;
+    if (!open) {
+      if (k === 'ArrowDown' || k === 'Enter' || k === ' ') { e.preventDefault(); setOpen(true); }
+      return;
+    }
+    if (k === 'Escape') { e.preventDefault(); setOpen(false); btn.focus(); }
+    else if (k === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (k === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (k === 'Home') { e.preventDefault(); active = 0; paintMenu(); }
+    else if (k === 'End') { e.preventDefault(); active = opts.length - 1; paintMenu(); }
+    else if (k === 'Enter' || k === ' ') { e.preventDefault(); choose(opts[active]?.value); }
+    else if (k === 'Tab') setOpen(false);
+  };
+  const onDoc = () => { if (open) setOpen(false); };
+  document.addEventListener('click', onDoc);
+
+  // set the closed state through the same path that toggles it, rather than
+  // trusting the markup above to agree with it
+  setOpen(false);
+  paintBtn(); paintMenu();
+  host.replaceChildren(wrap);
+  return {
+    el: wrap,
+    set(v) { value = v; paintBtn(); paintMenu(); },
+    // Counts move without the options themselves changing — a dropdown paired
+    // with another filter shows how many rows each choice would yield UNDER
+    // that filter, so the numbers have to be repaintable on their own.
+    setCounts(next) {
+      for (const o of opts) if (next[o.value] !== undefined) o.count = next[o.value];
+      paintBtn();
+      if (open) paintMenu();     // only visible while open; skip the DOM churn
+    },
+    destroy() { document.removeEventListener('click', onDoc); },
+  };
+}
+
+// --- posterior strip ------------------------------------------------------
+// A campaign that ranks by a POSTERIOR (the montecarlo campaign) publishes a
+// score with a 5–95% interval, `stats.lo90` / `stats.hi90`. A number with an
+// interval printed beside it reads as three numbers; the same thing drawn as a
+// bell on a shared axis reads as one claim with a width. The bell is the
+// Gaussian whose 5–95% band is the published interval (σ = width / 3.29) —
+// the Laplace posterior IS Gaussian, so this is the campaign's own shape, not
+// a decoration. `dom` is shared across every row so widths are comparable.
+export function scoreDomain(entries){
+  let lo = Infinity, hi = -Infinity;
+  for(const e of entries){
+    const s = e.stats || {};
+    if(s.lo90 == null || s.hi90 == null) continue;
+    lo = Math.min(lo, +s.lo90); hi = Math.max(hi, +s.hi90);
+  }
+  if(!isFinite(lo)) return null;
+  const pad = Math.max(3, (hi - lo) * 0.12);
+  return [Math.max(0, Math.floor(lo - pad)), Math.min(100, Math.ceil(hi + pad))];
+}
+
+export function bellSVG(e, dom, { w = 320, h = 60, ink = '#1A1A1A', fill = 'rgba(37,64,255,.28)', mute = '#8a857c' } = {}){
+  const s = e.stats || {};
+  const mu = +e.score, lo = +s.lo90, hi = +s.hi90;
+  if(!(isFinite(mu) && isFinite(lo) && isFinite(hi)) || !dom) return '';
+  const [d0, d1] = dom, ml = 26, mr = 26, top = 14, base = h - 14;
+  const x = v => ml + (v - d0) / (d1 - d0) * (w - ml - mr);
+  const sig = Math.max((hi - lo) / 3.29, 0.15);
+  const amp = base - top;
+  const y = v => base - amp * Math.exp(-((v - mu) ** 2) / (2 * sig * sig));
+  // Sample where the curve lives. Spread evenly over the whole axis, a narrow
+  // posterior (σ ≈ 1 point on a ~40-point axis) got a dozen samples and drew as a
+  // faceted spike whose apex missed the mean. So: dense within ±4σ of μ, μ itself
+  // always a sample, and the flat tails outside that as plain segments.
+  const samples = (a, b) => {
+    const k0 = Math.max(a, mu - 4 * sig), k1 = Math.min(b, mu + 4 * sig), n = 160, vs = [a, b];
+    if(k1 > k0) for(let i = 0; i <= n; i++) vs.push(k0 + (k1 - k0) * i / n);
+    if(mu > a && mu < b) vs.push(mu);
+    return [...new Set(vs)].sort((p, q) => p - q).map(v => [x(v), y(v)]);
+  };
+  const line = samples(d0, d1).map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(2)},${b.toFixed(2)}`).join('');
+  // shade only the published band, lo..hi, under the curve — same samples, so its edge sits on the line
+  const bandPath = `M${x(lo).toFixed(2)},${base} ` + samples(lo, hi).map(([a, b]) => `L${a.toFixed(2)},${b.toFixed(2)}`).join('') + ` L${x(hi).toFixed(2)},${base} Z`;
+  const f = v => (Math.round(v * 10) / 10).toFixed(1);
+  return `<svg class="bell" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="score ${f(mu)}, 5–95% interval ${f(lo)} to ${f(hi)}">
+    <line x1="${ml}" y1="${base}" x2="${w - mr}" y2="${base}" stroke="${ink}" stroke-width="1.5"/>
+    <path d="${bandPath}" fill="${fill}"/>
+    <path d="${line}" fill="none" stroke="${ink}" stroke-width="1.6"/>
+    <line x1="${x(mu).toFixed(1)}" y1="${y(mu).toFixed(1)}" x2="${x(mu).toFixed(1)}" y2="${base}" stroke="${ink}" stroke-width="1.6" stroke-dasharray="2 2"/>
+    <line x1="${x(lo).toFixed(1)}" y1="${base - 4}" x2="${x(lo).toFixed(1)}" y2="${base + 4}" stroke="${ink}" stroke-width="1.5"/>
+    <line x1="${x(hi).toFixed(1)}" y1="${base - 4}" x2="${x(hi).toFixed(1)}" y2="${base + 4}" stroke="${ink}" stroke-width="1.5"/>
+    <text x="${(x(lo) - 2).toFixed(1)}" y="${h - 2}" text-anchor="end" font-size="9" font-family="JetBrains Mono,monospace" fill="${mute}">${f(lo)}</text>
+    <text x="${(x(hi) + 2).toFixed(1)}" y="${h - 2}" text-anchor="start" font-size="9" font-family="JetBrains Mono,monospace" fill="${mute}">${f(hi)}</text>
+    <text x="${x(mu).toFixed(1)}" y="${Math.max(9, y(mu) - 4).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" font-family="Hanken Grotesk,sans-serif" fill="${ink}">${f(mu)}</text>
+  </svg>`;
+}

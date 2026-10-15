@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberArena — About us</title>
+<meta name="description" content="The team behind CyberArena — the researchers building the AI vs AI attack-and-defense CTF benchmark.">
+<link rel="canonical" href="https://cyber-arena.ai/pages/about.html">
+<meta property="og:site_name" content="CyberArena">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://cyber-arena.ai/pages/about.html">
+<meta property="og:title" content="CyberArena — About us">
+<meta property="og:description" content="The team behind CyberArena — the researchers building the AI vs AI attack-and-defense CTF benchmark.">
+<meta property="og:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta property="og:image" content="https://cyber-arena.ai/assets/img/og-square.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="630">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A riso-print robot fighter under the CYBER ARENA wordmark (square)">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://cyber-arena.ai/assets/img/og.jpg">
+<meta name="twitter:image:alt" content="A riso-print robot fighter beside the CYBER ARENA wordmark">
+<meta name="theme-color" content="#F7F3EC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="../assets/css/base.css">
+
+<link rel="stylesheet" href="../assets/css/about.css">
+<link rel="stylesheet" href="../assets/css/belt.css">
+<script defer src="https://cloud.umami.is/script.js" data-website-id="5809f7ec-470a-4bae-abcf-5737e7bb66a0"></script>
+</head>
+<body>
+<header class="topbar" id="site-top"><div class="wrap"><nav class="nav" id="site-nav"></nav></div></header>
+<script src="../assets/js/chrome.js"></script>
+<div class="wrap">
+
+  <div class="mast">
+    <h1>About <em>us</em></h1>
+  </div>
+
+  <div class="orgs">
+    <div class="org plate">
+      <a class="org-badge" href="https://2077ai.com" target="_blank" rel="noopener">
+        <img src="../assets/img/inst/2077ai.png" alt="2077AI logo"></a>
+      <p><a href="https://2077ai.com" target="_blank" rel="noopener"><b>2077AI</b></a> is an
+      open-source foundation working on AI data standardization: unlocking greater value from data,
+      accelerating AI development, and fostering an open, prosperous AI data ecosystem.</p>
+    </div>
+
+    <div class="org plate">
+      <a class="org-badge org-badge-wide" href="https://rdi.berkeley.edu" target="_blank" rel="noopener">
+        <img src="../assets/img/inst/rdi.png" alt="Berkeley RDI logo"></a>
+      <p><a href="https://rdi.berkeley.edu" target="_blank" rel="noopener"><b>Berkeley RDI</b></a> is a
+      multidisciplinary initiative at UC Berkeley dedicated to advancing the science, technology, and
+      education of AI and Agentic AI to empower a responsible digital economy.</p>
+    </div>
+  </div>
+
+  <div class="sech"><span>Core contributors</span></div>
+  <div class="team" id="team"></div>
+
+  <div class="sech"><span>Contact us</span></div>
+  <div class="contact">
+    <a class="cbox" href="https://x.com/cyberarenaai" target="_blank" rel="noopener">
+      <i class="fa-brands fa-x-twitter"></i>
+      <b>Twitter</b>
+    </a>
+    <a class="cbox" href="https://github.com/cyber-arena-ai/cyber-arena" target="_blank" rel="noopener">
+      <i class="fa-brands fa-github"></i>
+      <b>GitHub</b>
+    </a>
+    <a class="cbox" href="mailto:cyberarena@2077ai.com">
+      <i class="fa-solid fa-envelope"></i>
+      <b>Email</b>
+    </a>
+  </div>
+
+  <!-- institutions — conveyor belt (same vis as the homepage) -->
+  <div class="sech"><span>Participating institutions</span></div>
+  <div class="convey">
+    <div class="belt-items"><div class="belt-track" id="belt"></div></div>
+    <div class="band"><div class="rollers"></div></div><!-- wheels are generated to fit the width -->
+  </div>
+
+</div>
+<footer class="footer" id="site-footer"></footer>
+<script src="../assets/data/list.js"></script>
+<script src="../assets/data/contributors.js"></script>
+<script src="../assets/js/belt.js"></script>
+<script>
+// the author list ({gh, name}, in display order) lives in
+// assets/data/contributors.js — edit that file to add/remove/reorder. Avatars are
+// served from assets/img/team/ (tools/fetch-avatars.sh); GitHub only as a fallback.
+document.getElementById('team').innerHTML = (window.CONTRIBUTORS || []).map(({ gh: u, name }) => `
+  <a class="member" href="https://github.com/${u}" target="_blank" rel="noopener" title="@${u} on GitHub">
+    <img src="../assets/img/team/${u}.webp" width="76" height="76" decoding="async" alt="${name}'s avatar"
+      onerror="this.onerror=null;this.src='https://avatars.githubusercontent.com/${u}?s=160'">
+    <span class="name">${name}</span>
+    <span class="handle">@${u}</span>
+  </a>`).join('');
+// a name stays on one line: one that overflows its card is set smaller until it fits
+const fitNames = () => document.querySelectorAll('.member .name').forEach(n => {
+  n.style.fontSize = '';
+  for (let px = 14; n.scrollWidth > n.clientWidth && px > 10; ) n.style.fontSize = --px + 'px';
+});
+document.fonts.ready.then(fitNames);
+addEventListener('resize', fitNames);
+</script>
+</body>
+</html>
