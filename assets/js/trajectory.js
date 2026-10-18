@@ -1,6 +1,7 @@
 // Trajectory (single match) — chat thread + Sublime-style minimap
 import { loadJSON, loadHarnesses, fmtTime, runSeconds, esc, setActiveNav, api, ARCHIVE_RUNS } from './util.js';
 import { entrantIcon } from './entrant-icon.js';
+import { starHTML, bindLikes, paintStar } from './likes.js';
 
 setActiveNav('trajectory.html');
 
@@ -20,6 +21,16 @@ if(!runId){
   document.getElementById('chat').innerHTML =
     '<p style="padding:20px">No matches available yet.</p>';
   throw new Error('no run to display');
+}
+
+// The like star beside the analysis button. Drawn at once (hollow) and filled
+// in when the count arrives, so it never shifts the headline after paint.
+const likeSlot = document.getElementById('like-slot');
+if(likeSlot){
+  likeSlot.innerHTML = starHTML(runId, 0, 'like-btn');
+  bindLikes(likeSlot);
+  loadJSON(api(`/api/runs/${runId}/likes`), { cache: 'no-store' })
+    .then(d => paintStar(likeSlot.firstElementChild, d.likes || 0)).catch(() => {});
 }
 
 const [D, H] = await Promise.all([loadJSON(api(`/api/runs/${runId}/trajectory`)), loadHarnesses()]);

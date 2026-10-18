@@ -1,6 +1,7 @@
 // Runs directory — all matches this season (competitor-agnostic)
 import { loadJSON, loadHarnesses, esc, setActiveNav, renderPager, api, dropdown, ARCHIVE_RUNS } from './util.js';
 import { runRows, isSolo } from './run-row.js';
+import { bindLikes } from './likes.js';
 
 setActiveNav('runs.html');
 
@@ -46,6 +47,10 @@ function renderList(list){
   document.getElementById('runs').innerHTML = list.map(runRow).join('');
 }
 
+// Every star in the list, now and after any re-render: the count is written back
+// to the run so a later sort or page sees it.
+bindLikes(document.getElementById('runs'), (id, n) => { const r = runs.find(x => x.id === id); if(r) r.likes = n; });
+
 /* ---- paging over the (filtered) archive ---- */
 const PAGE = 20;
 let shown = runs, page = 1;
@@ -83,6 +88,15 @@ const HIT = Object.fromEntries(STATES.map(s => [s.key, s.hit]));
 const params = new URLSearchParams(location.search);
 const wantState = params.get('state');
 const wantCampaign = params.get('campaign');
+
+// Sort: newest first (the API's own order) or most liked first, ties by date.
+// The archive order is captured once so "latest" can always restore it.
+const SORTS = { latest: 'newest first', likes: 'most liked first' };
+let fSort = SORTS[params.get('sort')] ? params.get('sort') : 'latest';
+const ord = new Map(runs.map((r, i) => [r.id, i]));
+const sortRows = list => fSort === 'likes'
+  ? list.slice().sort((a, b) => (b.likes || 0) - (a.likes || 0) || ord.get(a.id) - ord.get(b.id))
+  : list.slice().sort((a, b) => ord.get(a.id) - ord.get(b.id));
 
 // The two filters compose: status is one of the run's axes, campaign is who
 // commissioned it. A run submitted by hand has no campaign at all.
@@ -131,15 +145,16 @@ function paintCounts(){
 // actually chosen.
 function syncURL(){
   const u = new URL(location);
-  for(const [k, v] of [['state', fState], ['campaign', fCampaign]])
-    v === 'all' ? u.searchParams.delete(k) : u.searchParams.set(k, v);
+  for(const [k, v, dflt] of [['state', fState, 'all'], ['campaign', fCampaign, 'all'], ['sort', fSort, 'latest']])
+    v === dflt ? u.searchParams.delete(k) : u.searchParams.set(k, v);
   // replaceState, not pushState: filtering is not navigation, and each keystroke
   // of a chip should not cost the reader a Back press to escape the page.
   history.replaceState(null, '', u);
 }
 
 function applyFilters(){
-  shown = runs.filter(r => inState(r) && inCampaign(r));
+  shown = sortRows(runs.filter(r => inState(r) && inCampaign(r)));
+  document.getElementById('listtitle').textContent = `All matches · ${SORTS[fSort]}`;
   page = 1;
   paintCounts();          // the other control's numbers move with this one
   syncURL();
@@ -180,9 +195,16 @@ if(chost && campaigns.size){
   });
 }
 
+dropdown(document.getElementById('sortpick'), {
+  label: 'sort',
+  value: fSort,
+  options: Object.entries(SORTS).map(([value, label]) => ({ value, label: value === 'likes' ? 'most liked' : 'latest' })),
+  onChange: v => { fSort = v; applyFilters(); },
+});
+
 // A restored filter has to reach the list — the first draw() above ran on the
 // unfiltered set. When nothing was restored there is nothing to re-draw, but the
 // URL may still carry a param that failed validation (a pruned campaign, a
 // hand-edited state), so sync it away rather than leave it naming nothing.
-if(fState !== 'all' || fCampaign !== 'all') applyFilters();
+if(fState !== 'all' || fCampaign !== 'all' || fSort !== 'latest') applyFilters();
 else { paintCounts(); syncURL(); }

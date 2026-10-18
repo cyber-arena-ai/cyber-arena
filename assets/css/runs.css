@@ -26,7 +26,11 @@
 .run.dead{background:var(--paper);cursor:default}
 
 .rdate{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;line-height:1.3;color:#555}
-.rdate b{display:block;font-size:15px;color:var(--ink)}
+.rdate > b{display:block;font-size:15px;color:var(--ink)}
+/* the like star sits centred under the date (likes.js; styles: .like in base.css):
+   the cell shrinks to the date's width and centres its column */
+.rdate{display:inline-flex;flex-direction:column;align-items:center;justify-self:start}
+.rdate .rlike{margin-top:7px}
 
 .rname{font-size:22px;font-weight:900;letter-spacing:-.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .rmeta{font-size:13px;color:#7a7468;margin-top:3px;font-weight:500}

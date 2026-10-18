@@ -13,6 +13,7 @@
 import { loadJSON, loadHarnesses, esc, setActiveNav, renderPager, api, ARCHIVE_RUNS } from './util.js';
 import { entrantIcon } from './entrant-icon.js';
 import { runRows, isSolo } from './run-row.js';
+import { bindLikes } from './likes.js';
 
 setActiveNav('entrants.html');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -188,6 +189,10 @@ function record(list){
   }
   return { w, l, d };
 }
+// the rows share run-row.js, stars included; a like is kept on the run so a
+// re-render (paging, re-seating) shows it
+bindLikes($('games'), (id, n) => { for (const r of runs) if (r.id === id) r.likes = n; });
+
 function paintGames(scroll = false){
   const list = games(), host = $('games'), head = $('ghead'), pager = $('pager');
   if (!list){

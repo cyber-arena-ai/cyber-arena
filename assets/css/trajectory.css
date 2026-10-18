@@ -267,6 +267,15 @@
      not_triggered -> "analyse", clickable    working_on -> "analysing", greyed
      ready | analysis_failure | not_available -> hidden                       */
 .headline{display:flex;align-items:baseline;justify-content:space-between;gap:20px}
+.hl-acts{flex:0 0 auto;align-self:center;display:flex;align-items:stretch;gap:12px}
+.hl-acts > span{display:flex}
+/* the like star as a block, the same size and print as .an-btn beside it */
+.like.like-btn{font-size:13px;color:var(--ink);background:var(--paper2);border:2px solid var(--ink);
+  box-shadow:3px 3px 0 var(--ink);padding:8px 14px;gap:7px;
+  transition:transform .12s ease, box-shadow .12s ease}
+.like.like-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.like.like-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.like.like-btn .like-plus{left:12px;top:-2px}
 .an-btn{flex:0 0 auto;align-self:center;font-family:inherit;font-weight:800;
   font-size:13px;letter-spacing:.4px;text-transform:lowercase;white-space:nowrap;
   background:var(--paper2);color:var(--ink);border:2px solid var(--ink);border-radius:0;
@@ -280,7 +289,10 @@
 .an-btn.an-retry{border-color:var(--pink);color:var(--pink);box-shadow:3px 3px 0 var(--pink)}
 .an-btn.an-retry:hover:not(:disabled){box-shadow:5px 5px 0 var(--pink)}
 .an-btn[hidden]{display:none}
-@media(max-width:560px){.headline{gap:12px}
+@media(max-width:560px){.headline{gap:12px;flex-wrap:wrap}
+  .hl-acts{margin-left:auto}
+  .hl-acts{gap:8px}
+  .like.like-btn{font-size:12px;padding:7px 11px;box-shadow:2px 2px 0 var(--ink)}
   .an-btn{font-size:12px;padding:7px 14px;box-shadow:2px 2px 0 var(--ink)}
   .an-btn:disabled{box-shadow:2px 2px 0 var(--mut)}}
 

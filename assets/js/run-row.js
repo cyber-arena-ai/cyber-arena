@@ -1,10 +1,11 @@
-// One match as a row of the results ledger: date, name, the two entrants,
-// score, verdict. Shared by the Runs page and the Entrants page, so the two
+// One match as a row of the results ledger: date (with its like star), name,
+// the two entrants, score, verdict. Shared by the Runs page and the Entrants page, so the two
 // lists cannot drift apart. Styles: assets/css/runs.css (.run and friends).
 //
 //   const R = runRows(H);  R.row(run, i) -> '<a class="run …">'   R.STATES, R.isSolo, R.durText
 import { fmtTime, runSeconds, esc } from './util.js';
 import { entrantIcon } from './entrant-icon.js';
+import { starHTML } from './likes.js';
 
 // A `solo` run has ONE agent: the orchestrator fills the opposing seat with an
 // `idle` placeholder, which is not a competitor and must never be rendered as one.
@@ -104,7 +105,7 @@ export function runRows(H){
     const ent = (t, h, d, c) =>
       `${entrantIcon(H, t, 0, { inline: true, cls: c })}${t.model}<i class="hb" title="${h.fullName}">${h.shortName}</i>`;
     const inner = `
-      <div class="rdate">${dateLabel(r.date, r.time)}</div>
+      <div class="rdate">${dateLabel(r.date, r.time)}${starHTML(r.id, r.likes || 0, 'rlike')}</div>
       <div>
         <div class="rname">${r.name}${r.category ? ` <span class="badge ${r.category.toLowerCase()}">${r.category}</span>` : ''} ${modeTag(r)}${statusTag(r)}</div>
         <div class="rmeta">${r.challenge} · ${r.rounds} rounds · ${durHTML(r)}${r.campaign ? ` · <span class="cmp" title="commissioned by the ${esc(r.campaign.type)} campaign &quot;${esc(r.campaign.id)}&quot;">${esc(r.campaign.id)}</span>` : ''}</div>

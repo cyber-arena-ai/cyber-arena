@@ -47,7 +47,11 @@
 
   <div class="headline">
     <h2 id="hl"></h2>
-    <button id="an-btn" class="an-btn" hidden aria-label="Run post-match analysis"></button>
+    <!-- like sits left of analysis, and takes its place on the edge when analysis is hidden -->
+    <div class="hl-acts">
+      <span id="like-slot"></span>
+      <button id="an-btn" class="an-btn" hidden aria-label="Run post-match analysis"></button>
+    </div>
   </div>
 
   <div class="board" id="board"></div>

@@ -287,6 +287,24 @@ body > .footer{position:sticky;top:100vh}
 /* on the selected (ink) row the block would vanish into the dark ground */
 .dd-menu li.on .dd-tag{background:rgba(247,243,236,.22);color:var(--paper)}
 
+/* ---- like star (assets/js/likes.js) — match rows and the match thread ----
+   Hollow and numberless at 0; solid with the count once liked. A click pops the
+   star and floats a "+1" off it. */
+.like{position:relative;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  font:700 12px/1 'JetBrains Mono',monospace;color:var(--mut);user-select:none;
+  -webkit-tap-highlight-color:transparent}
+.like i{font-size:13px;transition:color var(--t-ui,.15s),transform var(--t-press,.12s)}
+.like b{font-weight:700;color:var(--ink)}
+.like.on i{color:#E8A317}
+.like:hover i{color:#E8A317;transform:scale(1.15)}
+.like:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.like.pop i{animation:likepop .45s var(--ease-spring,cubic-bezier(.34,1.56,.64,1))}
+.like .like-plus{position:absolute;left:2px;top:-4px;font:800 11px/1 'JetBrains Mono',monospace;
+  font-style:normal;color:#E8A317;pointer-events:none;animation:likeplus .7s ease-out forwards}
+@keyframes likepop{0%{transform:scale(1)}30%{transform:scale(1.6) rotate(-15deg)}
+  60%{transform:scale(.9) rotate(8deg)}100%{transform:scale(1)}}
+@keyframes likeplus{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-18px)}}
+
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important;animation-iteration-count:1 !important}
   html{scroll-behavior:auto}
