@@ -271,7 +271,7 @@
 .hl-acts > span{display:flex}
 /* the like star as a block, the same size and print as .an-btn beside it */
 .like.like-btn{font-size:13px;color:var(--ink);background:var(--paper2);border:2px solid var(--ink);
-  box-shadow:3px 3px 0 var(--ink);padding:8px 14px;gap:7px;
+  box-shadow:3px 3px 0 var(--ink);padding:8px 14px;gap:7px;justify-content:center;min-width:44px;
   transition:transform .12s ease, box-shadow .12s ease}
 .like.like-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
 .like.like-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}

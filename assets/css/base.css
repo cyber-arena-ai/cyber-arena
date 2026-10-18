@@ -295,6 +295,8 @@ body > .footer{position:sticky;top:100vh}
   -webkit-tap-highlight-color:transparent}
 .like i{font-size:13px;transition:color var(--t-ui,.15s),transform var(--t-press,.12s)}
 .like b{font-weight:700;color:var(--ink)}
+/* no likes: no number, and no gap reserved for one, so the star sits centred */
+.like b:empty{display:none}
 .like.on i{color:#E8A317}
 .like:hover i{color:#E8A317;transform:scale(1.15)}
 .like:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
