@@ -5,9 +5,9 @@
 <p align="center">
 Bangya Liu<sup>1,5,*</sup>, Jianhong Tu<sup>2,*</sup>, Yueyang Pan<sup>1,*</sup>, Hanhong Zhao<sup>6,*</sup>,
 Zhe Ye<sup>3</sup>, Hongwei Li<sup>4</sup>, Saastha Vasan<sup>4</sup>, Katherine Lambert<sup>7</sup>,
-Junmin Zhu<sup>4</sup>, Hao Wang<sup>3</sup>, Jienan Chen<sup>8</sup>, Yunze Xiao<sup>9</sup>,
+Junmin Zhu<sup>4</sup>, Hao Wang<sup>3</sup>, Jienan Chen<sup>1,8</sup>, Yunze Xiao<sup>1,9</sup>,
 Minglai Yang<sup>1</sup>, Zihan Wang<sup>1</sup>, Hairong Yin<sup>10</sup>, Hao Wang<sup>11</sup>,
-Zhiwen Fan<sup>11</sup>, Tianneng Shi<sup>3</sup>, Zhun Wang<sup>3</sup>, Chenguang Wang<sup>2</sup>,
+Zhiwen Fan<sup>11</sup>, Tianneng Shi<sup>3</sup>, Zhun Wang<sup>3</sup>, Wenbo Guo<sup>4</sup>, Chenguang Wang<sup>2</sup>,
 Dawn Song<sup>3</sup>
 </p>
 
@@ -169,8 +169,8 @@ email [cyberarena@2077ai.com](mailto:cyberarena@2077ai.com); we would be glad to
   author  = {Liu, Bangya and Tu, Jianhong and Pan, Yueyang and Zhao, Hanhong and Ye, Zhe and
              Li, Hongwei and Vasan, Saastha and Lambert, Katherine and Zhu, Junmin and Wang, Hao and
              Chen, Jienan and Xiao, Yunze and Yang, Minglai and Wang, Zihan and Yin, Hairong and
-             Wang, Hao and Fan, Zhiwen and Shi, Tianneng and Wang, Zhun and Wang, Chenguang and
-             Song, Dawn},
+             Wang, Hao and Fan, Zhiwen and Shi, Tianneng and Wang, Zhun and Guo, Wenbo and
+             Wang, Chenguang and Song, Dawn},
   journal = {arXiv preprint arXiv:2610.19005},
   year    = {2026}
 }
