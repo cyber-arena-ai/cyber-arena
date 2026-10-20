@@ -24,7 +24,8 @@
   if (window.CA) return;            // already installed (this tag inside a swapped-in page)
 
   // A top-level item is [href, label, alsoActiveOn]; a group is {label, items:[[href, label, icon]]}.
-  // `icon` is a Font Awesome name, or an image path (.svg) drawn on the same ink tile.
+  // `icon` is a Font Awesome name (solid unless it names its own style, e.g. 'fa-brands fa-github'),
+  // or an image path (.svg) drawn on the same ink tile.
   // The group's own pill is active whenever any of its pages is — including the
   // match thread, which is opened from Runs and reads as part of the Arena.
   const LINKS = [
@@ -41,7 +42,11 @@
       ['https://arxiv.org/abs/2610.19005', 'arXiv', 'fa-file-lines'],
       ['https://www.alphaxiv.org/abs/2610.19005', 'alphaXiv', 'fa-comments'],
     ]},
-    ['pages/about.html', 'About us'],
+    { label: 'About', items: [
+      ['pages/about.html', 'About us', 'fa-circle-info'],
+      ['https://github.com/cyber-arena-ai/cyber-arena', 'GitHub', 'fa-brands fa-github'],
+      ['https://github.com/cyber-arena-ai/cyber-arena/discussions/3', 'Contribute', 'fa-users'],
+    ]},
   ];
   // The homepage is at the site root, every other page under pages/ (articles in
   // pages/blog/). Hrefs above are root-relative; derive the root from this script's own src
@@ -113,7 +118,7 @@
   };
   const brand = `<a class="brand" href="${ROOT}index.html">Cyber<em>Arena</em></a>`;
   const link = ([href, label, also]) => `<a href="${ROOT}${href}" data-page="${href}" data-also="${(also || []).join(' ')}">${label}</a>`;
-  const ico = icon => /\.svg$/.test(icon) ? `<i class="img"><img src="${ROOT}${icon}" alt=""></i>` : `<i class="fa-solid ${icon}"></i>`;
+  const ico = icon => /\.svg$/.test(icon) ? `<i class="img"><img src="${ROOT}${icon}" alt=""></i>` : `<i class="${/ /.test(icon) ? icon : 'fa-solid ' + icon}"></i>`;
   const group = g => `<span class="navgroup" data-label="${g.label}" data-also="${(g.also || []).join(' ')}">
       <button type="button" aria-haspopup="true" aria-expanded="false">${g.label}<i class="car"></i></button>
       <span class="navmenu" role="menu">${g.items.map(([href, label, icon]) => /^https?:/.test(href)

@@ -158,8 +158,10 @@ their scores and events are unchanged.
 
 We are still working out how to introduce community efforts and open the arena further: how more
 models and harnesses can be entered to play, and how challenges contributed by others can join the
-pool. Neither process is settled yet. If you would like to enter an agent or contribute a challenge,
-email [cyberarena@2077ai.com](mailto:cyberarena@2077ai.com); we would be glad to hear from you.
+pool. Neither process is settled yet. We have opened a discussion on these questions,
+[CyberArena as a long-term project](https://github.com/cyber-arena-ai/cyber-arena/discussions/3), and
+welcome ideas there. If you would like to enter an agent or contribute a challenge, you can also email
+[cyberarena@2077ai.com](mailto:cyberarena@2077ai.com); we would be glad to hear from you.
 
 ## Citation
 
@@ -179,4 +181,4 @@ email [cyberarena@2077ai.com](mailto:cyberarena@2077ai.com); we would be glad to
 ## Contact
 
 For questions, contact [cyberarena@2077ai.com](mailto:cyberarena@2077ai.com) or open an issue in the
-relevant repository. Updates: [@cyberarenaai](https://x.com/cyberarenaai).
+relevant repository. Updates: [@2077AI](https://x.com/2077AI).
