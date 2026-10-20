@@ -461,7 +461,8 @@ table.heat tbody tr+tr td{border-top:2px solid var(--paper2)}
    the box while it is open. A term in the prose marked
    <dfn class="term" data-g="key"> shows the same <dt id="g-key"> entry as a
    tooltip, so a definition is written once. */
-.gloss{position:fixed;right:18px;top:calc(var(--nav-h,60px) + 14px);z-index:45}
+/* under the header (.topbar is 40), so the nav's drop-downs open over it; above the sticky stage heads (30) */
+.gloss{position:fixed;right:18px;top:calc(var(--nav-h,60px) + 14px);z-index:35}
 .gloss > button{display:inline-flex;align-items:center;gap:8px;font:800 12px/1 'Hanken Grotesk',sans-serif;
   color:var(--paper);background:var(--ink);border:0;padding:8px 12px;cursor:pointer}
 /* the same box as a stage's number tile (.stage .n: 12px type, 8px padding), so the two sit as one row */
@@ -469,7 +470,10 @@ table.heat tbody tr+tr td{border-top:2px solid var(--paper2)}
 /* a bridge across the gap, so moving from the button into the box keeps it open */
 .gloss.on::after{content:"";position:absolute;right:0;top:100%;width:min(450px,calc(100vw - 24px));height:12px}
 /* in the phone top bar: the icon alone */
+.gloss.compact{z-index:45}
 .gloss.compact > button{padding:8px 10px}
+/* the phone menu opens under the bar the icon sits in: step aside while it is open */
+html:has(.nav.open) .gloss{visibility:hidden}
 .gloss.compact > button span{display:none}
 .gloss-box{position:absolute;right:0;top:calc(100% + 12px);
   width:min(450px,calc(100vw - 24px));max-height:calc(100vh - var(--nav-h,60px) - 90px);overflow:auto;
@@ -485,7 +489,7 @@ table.heat tbody tr+tr td{border-top:2px solid var(--paper2)}
 .gloss-box dd{margin:0;color:#4a463f}
 dfn.term{font-style:normal;text-decoration:underline dotted var(--purple);text-decoration-thickness:2px;
   text-underline-offset:3px;cursor:help}
-.term-tip{position:fixed;z-index:46;max-width:300px;background:var(--ink);color:var(--paper);
+.term-tip{position:fixed;z-index:36;max-width:300px;background:var(--ink);color:var(--paper);
   padding:9px 12px;font-size:13px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity .12s}
 .term-tip.on{opacity:1}
 .term-tip b{display:block;font:800 10.5px/1.2 'JetBrains Mono',monospace;letter-spacing:1px;
