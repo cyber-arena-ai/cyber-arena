@@ -29,6 +29,8 @@ Dawn Song<sup>3</sup>
   <a href="https://github.com/cyber-arena-ai/octagon"><img src="https://img.shields.io/badge/code-Octagon-F2B807?logo=github" alt="Octagon"></a>
 </p>
 
+https://github.com/user-attachments/assets/a7ed8e97-2d13-4778-862b-02721a30f1d3
+
 ## News
 
 - **2026-10-15** — The game engine, [Octagon](https://github.com/cyber-arena-ai/octagon), is open source.
